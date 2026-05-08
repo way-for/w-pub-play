@@ -183,7 +183,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--u
       <p>搜索全网免费小说 · 在线阅读 · 本地下载</p>
     </div>
     <div class="srow">
-      <input class="sinput" id="sinput" placeholder="输入书名或作者名…">
+      <input class="sinput" id="sinput" placeholder="输入书名或作者名…" autocomplete="off" autocorrect="off" spellcheck="false" type="search" name="novel-search">
       <button class="sbtn" id="sbtn" onclick="doSearch()">搜 索</button>
     </div>
     <p class="shint">内容来源于互联网，仅供个人学习使用</p>
@@ -426,6 +426,12 @@ async function enterReader(su,st){
 }
 
 async function fetchBook(){
+  // 15秒超时提示
+  const t=setTimeout(()=>{
+    if(!_loaded){
+      document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:12px">目录解析较慢，该网站可能访问受限。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
+    }
+  },15000)
   try{
     const d=await api('book',_burl)
     _btitle=d.title||_btitle
@@ -443,7 +449,9 @@ async function fetchBook(){
       document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:14px">暂无法解析该网站目录。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
       document.getElementById('clist').innerHTML=`<div style="padding:18px;text-align:center"><p style="color:var(--text3);font-size:12px;margin-bottom:10px">目录解析失败</p><a href="${_burl}" target="_blank" style="color:var(--accent);font-size:12px">原网站 ↗</a></div>`
     }
+    clearTimeout(t)
   }catch(e){
+    clearTimeout(t)
     document.getElementById('chtitle').textContent='加载失败'
     document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:14px">目录解析失败。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
     document.getElementById('clist').innerHTML=`<div style="padding:18px;text-align:center"><a href="${_burl}" target="_blank" style="color:var(--accent);font-size:12px">原网站阅读 ↗</a></div>`
