@@ -384,7 +384,7 @@ body{transition:background var(--trans),color var(--trans)}
     </div>
     <div style="display:flex;justify-content:center">
       <div class="search-box">
-        <input class="search-input" id="searchInput" placeholder="输入书名或作者..." onkeydown="if(event.key==='Enter')doSearch()">
+        <input class="search-input" id="searchInput" placeholder="输入书名或作者...">
         <button class="search-btn" onclick="doSearch()">🔍</button>
       </div>
     </div>
@@ -690,9 +690,12 @@ async function api(action, param){
 }
 
 /* ══ SEARCH ══ */
+let _searching=false
 async function doSearch(){
+  if(_searching){toast('搜索中，请稍候…');return}
   const q=document.getElementById('searchInput').value.trim()
   if(!q){toast('请输入搜索内容');return}
+  _searching=true
   document.getElementById('homeArea').style.display='none'
   document.getElementById('resultsList').style.display='block'
   document.getElementById('resItems').innerHTML='<div class="loading">搜索中</div>'
@@ -718,6 +721,8 @@ async function doSearch(){
     }).join('')
   }catch(e){
     document.getElementById('resItems').innerHTML=`<div class="empty"><div class="icon">⚠️</div><p>搜索失败：${e.message}</p></div>`
+  } finally {
+    _searching=false
   }
 }
 
@@ -942,7 +947,7 @@ function toast(msg,ms=2400){
 
 /* ══ INIT ══ */
 applySettings()
-document.getElementById('searchInput').addEventListener('keydown',e=>{ if(e.key==='Enter')doSearch() })
+document.getElementById('searchInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doSearch() } })
 </script>
 </body>
 </html>
