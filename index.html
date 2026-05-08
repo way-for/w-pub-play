@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>墨卷 · 免费小说阅读</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== CSS VARIABLES & THEMES ===== */
+    :root {
+      --bg:      #f5f0e8;
+      --bg2:     #ede7da;
+      --surface: #fdfaf5;
+      --surface2:#f2ece1;
+      --text:    #2c2416;
+      --text2:   #6b5e4e;
+      --text3:   #a8967e;
+      --accent:  #8b4513;
+      --accent2: #6d3410;
+      --accent-light: #f5e6d8;
+      --border:  #ddd0bc;
+      --shadow:  0 2px 12px rgba(60,40,10,.08);
+      --shadow2: 0 8px 32px rgba(60,40,10,.14);
+      --r:       14px;
+      --r-sm:    8px;
+      --font-size: 18px;
+      --line-h:  2;
+      --read-font: 'Noto Serif SC', 'SimSun', serif;
+      --ui-font:  'Noto Sans SC', 'PingFang SC', sans-serif;
+    }
+    [data-theme="dark"] {
+      --bg:      #0f0e0c;
+      --bg2:     #1a1815;
+      --surface: #1e1c18;
+      --surface2:#28251f;
+      --text:    #e8e0d0;
+      --text2:   #a09080;
+      --text3:   #665a4a;
+      --accent:  #c4783a;
+      --accent2: #e09050;
+      --accent-light:#2a1f14;
+      --border:  #302c24;
+      --shadow:  0 2px 12px rgba(0,0,0,.4);
+      --shadow2: 0 8px 32px rgba(0,0,0,.6);
+    }
+    [data-theme="mint"] {
+      --bg:      #e8f5f0;
+      --bg2:     #d8eee7;
+      --surface: #f4fcf8;
+      --surface2:#dff0e8;
+      --text:    #1a3028;
+      --text2:   #4a7060;
+      --text3:   #80a898;
+      --accent:  #2d7a5a;
+      --accent2: #1f5e43;
+      --accent-light:#d4ede4;
+      --border:  #b8ddd0;
+      --shadow:  0 2px 12px rgba(20,60,40,.08);
+    }
+    [data-theme="ink"] {
+      --bg:      #f0eff0;
+      --bg2:     #e5e4e6;
+      --surface: #fafafa;
+      --surface2:#eeeeef;
+      --text:    #111118;
+      --text2:   #555560;
+      --text3:   #99999a;
+      --accent:  #3a3aaa;
+      --accent2: #2828aa;
+      --accent-light:#e8e8f8;
+      --border:  #d4d4d8;
+      --shadow:  0 2px 12px rgba(0,0,20,.08);
+    }
+
+    /* ===== RESET & BASE ===== */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body {
+      font-family: var(--ui-font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background .3s, color .3s;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== PROGRESS BAR ===== */
+    #readProgress {
+      position:fixed;top:0;left:0;height:2px;
+      background: var(--accent);width:0;z-index:1000;
+      transition:width .1s linear;pointer-events:none;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      position:sticky;top:0;z-index:200;
+      background: rgba(253,250,245,.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      height:56px;padding:0 16px;
+      display:flex;align-items:center;gap:12px;
+    }
+    [data-theme="dark"] .header { background: rgba(30,28,24,.92); }
+    [data-theme="mint"] .header { background: rgba(244,252,248,.92); }
+    [data-theme="ink"]  .header { background: rgba(250,250,250,.92); }
+    .logo {
+      font-family:'Noto Serif SC',serif;font-size:18px;font-weight:700;
+      color:var(--accent);cursor:pointer;text-decoration:none;
+      display:flex;align-items:center;gap:6px;letter-spacing:.5px;
+    }
+    .logo-icon{font-size:20px}
+    .header-space{flex:1}
+    .icon-btn {
+      background:none;border:none;cursor:pointer;
+      color:var(--text2);font-size:20px;padding:8px;
+      border-radius:var(--r-sm);transition:all .2s;line-height:1;
+    }
+    .icon-btn:hover{background:var(--surface2);color:var(--text)}
+
+    /* ===== CONTAINER ===== */
+    .container{max-width:880px;margin:0 auto;padding:20px 16px}
+
+    /* ===== PAGES ===== */
+    .page{display:none}
+    .page.active{display:block}
+
+    /* ===== SEARCH HERO ===== */
+    .hero {
+      text-align:center;padding:48px 16px 32px;
+    }
+    .hero-title {
+      font-family:'Noto Serif SC',serif;
+      font-size:clamp(28px,5vw,42px);font-weight:700;
+      color:var(--text);margin-bottom:8px;letter-spacing:1px;
+    }
+    .hero-sub {
+      font-size:14px;color:var(--text3);margin-bottom:32px;
+      letter-spacing:.5px;
+    }
+    .search-wrap {
+      max-width:560px;margin:0 auto;
+      display:flex;gap:8px;
+      background:var(--surface);
+      border:1.5px solid var(--border);
+      border-radius:50px;padding:6px 6px 6px 20px;
+      box-shadow:var(--shadow2);
+      transition:border-color .2s;
+    }
+    .search-wrap:focus-within{border-color:var(--accent)}
+    .search-input {
+      flex:1;border:none;background:transparent;
+      font-size:15px;color:var(--text);outline:none;
+      font-family:var(--ui-font);min-width:0;
+    }
+    .search-input::placeholder{color:var(--text3)}
+    .search-btn {
+      background:var(--accent);color:#fff;border:none;
+      border-radius:40px;padding:10px 20px;
+      font-size:14px;cursor:pointer;font-family:var(--ui-font);
+      font-weight:500;transition:background .2s;white-space:nowrap;
+    }
+    .search-btn:hover{background:var(--accent2)}
+    .search-hint{font-size:12px;color:var(--text3);text-align:center;margin-top:12px}
+
+    /* ===== SECTION TITLE ===== */
+    .sec-title {
+      font-size:15px;font-weight:600;color:var(--text);
+      margin-bottom:14px;display:flex;align-items:baseline;gap:8px;
+    }
+    .sec-count{font-size:12px;color:var(--text3);font-weight:400}
+
+    /* ===== SEARCH RESULTS ===== */
+    .results-list{display:flex;flex-direction:column;gap:10px}
+    .result-card {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:14px 16px;
+      display:flex;align-items:center;gap:14px;
+      cursor:pointer;transition:all .2s;
+    }
+    .result-card:hover {
+      border-color:var(--accent);transform:translateY(-1px);
+      box-shadow:var(--shadow2);
+    }
+    .mini-cover {
+      width:52px;height:70px;border-radius:var(--r-sm);
+      flex-shrink:0;overflow:hidden;
+      background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .mini-cover img{width:100%;height:100%;object-fit:cover}
+    .mini-cover-txt{color:#fff;font-size:11px;text-align:center;padding:4px;font-family:'Noto Serif SC',serif;line-height:1.4}
+    .result-info{flex:1;min-width:0}
+    .result-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .result-meta{font-size:12px;color:var(--text3);margin-bottom:4px}
+    .result-latest{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .result-arrow{color:var(--text3);font-size:18px;flex-shrink:0}
+
+    /* ===== RECENT LIST ===== */
+    .recent-list{display:flex;flex-direction:column;gap:6px}
+    .recent-item {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:12px 14px;
+      display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .2s;
+    }
+    .recent-item:hover{border-color:var(--accent);background:var(--accent-light)}
+    .recent-info{flex:1;min-width:0}
+    .recent-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .recent-ch{font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .continue-btn {
+      flex-shrink:0;background:var(--accent);color:#fff;
+      border:none;border-radius:20px;padding:5px 14px;
+      font-size:12px;cursor:pointer;font-family:var(--ui-font);
+      transition:background .2s;
+    }
+    .continue-btn:hover{background:var(--accent2)}
+
+    /* ===== TIP BOX ===== */
+    .tip-box {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:18px 20px;
+      font-size:13px;color:var(--text2);line-height:2;
+    }
+    .tip-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px}
+    .sep{height:1px;background:var(--border);margin:20px 0}
+
+    /* ===== BOOK DETAIL PAGE ===== */
+    .back-btn {
+      display:inline-flex;align-items:center;gap:4px;
+      color:var(--text2);font-size:14px;cursor:pointer;
+      padding:6px 10px;border-radius:var(--r-sm);
+      transition:background .2s;margin-bottom:16px;
+    }
+    .back-btn:hover{background:var(--surface2)}
+    .book-hero {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:20px;
+      display:flex;gap:20px;box-shadow:var(--shadow);margin-bottom:16px;
+    }
+    .book-cover-lg {
+      width:96px;height:128px;border-radius:var(--r-sm);
+      flex-shrink:0;overflow:hidden;
+      background:linear-gradient(145deg,var(--accent) 0%,var(--accent2) 100%);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .book-cover-lg img{width:100%;height:100%;object-fit:cover}
+    .book-cover-txt{color:#fff;font-size:13px;text-align:center;padding:8px;font-family:'Noto Serif SC',serif;line-height:1.5}
+    .book-detail-meta{flex:1;min-width:0}
+    .book-title{font-family:'Noto Serif SC',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:6px}
+    .book-author{font-size:13px;color:var(--text3);margin-bottom:12px}
+    .book-stats{font-size:12px;color:var(--text3);margin-bottom:14px}
+    .book-btns{display:flex;flex-wrap:wrap;gap:8px}
+    .btn-primary {
+      background:var(--accent);color:#fff;border:none;
+      border-radius:var(--r-sm);padding:9px 18px;
+      font-size:14px;cursor:pointer;font-family:var(--ui-font);
+      font-weight:500;transition:background .2s;
+    }
+    .btn-primary:hover{background:var(--accent2)}
+    .btn-secondary {
+      background:transparent;color:var(--text);
+      border:1px solid var(--border);border-radius:var(--r-sm);
+      padding:9px 18px;font-size:14px;cursor:pointer;
+      font-family:var(--ui-font);transition:all .2s;
+    }
+    .btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+    .book-intro-box {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:16px;margin-bottom:16px;
+      font-size:14px;color:var(--text2);line-height:1.9;
+    }
+    .book-intro-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px}
+
+    /* ===== CHAPTER LIST ===== */
+    .ch-list-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .ch-item {
+      padding:11px 16px;border-bottom:1px solid var(--border);
+      cursor:pointer;font-size:14px;color:var(--text2);
+      display:flex;align-items:center;justify-content:space-between;
+      transition:background .15s;
+    }
+    .ch-item:last-child{border-bottom:none}
+    .ch-item:hover{background:var(--surface2)}
+    .ch-item.ch-current{color:var(--accent);font-weight:600}
+    .ch-item.ch-read{color:var(--text3)}
+    .ch-current-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
+    .show-more-btn {
+      text-align:center;padding:12px;cursor:pointer;
+      color:var(--accent);font-size:13px;
+      border-top:1px solid var(--border);transition:background .2s;
+    }
+    .show-more-btn:hover{background:var(--surface2)}
+
+    /* ===== READER PAGE ===== */
+    .reader-wrap{max-width:720px;margin:0 auto}
+    .reader-top {
+      background:rgba(253,250,245,.92);
+      backdrop-filter:blur(16px);
+      border-bottom:1px solid var(--border);
+      padding:0 12px;height:50px;
+      display:flex;align-items:center;gap:10px;
+      position:sticky;top:56px;z-index:100;
+    }
+    [data-theme="dark"] .reader-top{background:rgba(30,28,24,.92)}
+    .reader-chapter-title{
+      flex:1;font-size:13px;color:var(--text2);
+      overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    }
+    .reader-body {
+      padding:28px 20px 40px;
+      font-family:var(--read-font);
+      font-size:var(--font-size);
+      line-height:var(--line-h);
+      color:var(--text);
+      word-break:break-word;
+      white-space:pre-wrap;
+      min-height:60vh;
+    }
+    .reader-body p{text-indent:2em;margin-bottom:.5em}
+    .reader-nav-bar {
+      display:flex;gap:8px;padding:16px;
+      border-top:1px solid var(--border);
+      background:var(--surface);
+    }
+    .reader-nav-bar .btn-primary,.reader-nav-bar .btn-secondary{flex:1;text-align:center}
+    .ch-progress{text-align:center;font-size:12px;color:var(--text3);padding:10px}
+
+    /* ===== SETTINGS SHEET ===== */
+    .sheet-overlay {
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,.45);z-index:500;
+    }
+    .sheet-overlay.open{display:flex;align-items:flex-end;justify-content:center}
+    .sheet {
+      background:var(--surface);width:100%;max-width:640px;
+      border-radius:20px 20px 0 0;padding:20px 24px 32px;
+      animation:slideUp .25s ease;
+    }
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 20px}
+    .sheet-title{font-size:16px;font-weight:600;color:var(--text);text-align:center;margin-bottom:20px}
+    .setting-row{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 0;border-bottom:1px solid var(--border);
+    }
+    .setting-row:last-child{border-bottom:none}
+    .setting-label{font-size:14px;color:var(--text)}
+    .theme-dots{display:flex;gap:8px}
+    .theme-dot {
+      width:28px;height:28px;border-radius:50%;cursor:pointer;
+      border:3px solid transparent;transition:border-color .2s;
+      position:relative;
+    }
+    .theme-dot.active::after{
+      content:'✓';position:absolute;inset:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:13px;color:#fff;font-weight:700;
+    }
+    .theme-dot[data-t="ink"].active::after{color:#3a3aaa}
+    .theme-dot.active{border-color:var(--accent)}
+    .stepper{display:flex;align-items:center;gap:10px}
+    .step-btn {
+      width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+      background:var(--surface2);color:var(--text);cursor:pointer;
+      font-size:16px;display:flex;align-items:center;justify-content:center;
+      transition:all .2s;
+    }
+    .step-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .step-val{min-width:36px;text-align:center;font-size:15px;color:var(--text);font-weight:500}
+    select.ui-select {
+      background:var(--surface2);border:1px solid var(--border);
+      color:var(--text);padding:6px 10px;border-radius:var(--r-sm);
+      font-size:13px;font-family:var(--ui-font);outline:none;cursor:pointer;
+    }
+
+    /* ===== AUTH MODAL ===== */
+    .modal-bg {
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,.5);z-index:600;
+      align-items:center;justify-content:center;padding:16px;
+    }
+    .modal-bg.open{display:flex}
+    .modal-box {
+      background:var(--surface);border-radius:var(--r);
+      padding:28px 24px;width:100%;max-width:400px;
+      box-shadow:var(--shadow2);
+    }
+    .modal-title{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px}
+    .modal-sub{font-size:13px;color:var(--text3);margin-bottom:24px}
+    .tab-row{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .auth-tab{
+      flex:1;text-align:center;padding:8px;cursor:pointer;
+      font-size:14px;color:var(--text3);
+      border-bottom:2px solid transparent;transition:all .2s;
+    }
+    .auth-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+    .field input {
+      width:100%;padding:11px 14px;
+      border:1.5px solid var(--border);border-radius:var(--r-sm);
+      background:var(--bg);color:var(--text);
+      font-size:15px;font-family:var(--ui-font);
+      outline:none;transition:border-color .2s;
+    }
+    .field input:focus{border-color:var(--accent)}
+    .field-err{color:#e53;font-size:12px;margin-top:5px}
+    .modal-close{
+      position:absolute;right:16px;top:16px;
+      background:none;border:none;cursor:pointer;
+      color:var(--text3);font-size:22px;line-height:1;
+    }
+
+    /* ===== ACCOUNT PAGE ===== */
+    .user-card {
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:20px;margin-bottom:16px;
+      display:flex;align-items:center;gap:16px;
+    }
+    .avatar {
+      width:52px;height:52px;border-radius:50%;
+      background:var(--accent);color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;font-weight:700;flex-shrink:0;
+      font-family:'Noto Serif SC',serif;
+    }
+    .user-info{flex:1;min-width:0}
+    .user-name{font-size:16px;font-weight:600;color:var(--text)}
+    .user-email{font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .shelf-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+      gap:12px;
+    }
+    .shelf-card{cursor:pointer;transition:transform .2s}
+    .shelf-card:hover{transform:translateY(-2px)}
+    .shelf-thumb{
+      width:100%;aspect-ratio:3/4;border-radius:var(--r-sm);
+      overflow:hidden;background:linear-gradient(145deg,var(--accent) 0%,var(--accent2) 100%);
+      display:flex;align-items:center;justify-content:center;margin-bottom:6px;
+    }
+    .shelf-thumb img{width:100%;height:100%;object-fit:cover}
+    .shelf-thumb-txt{color:#fff;font-size:11px;text-align:center;padding:4px;font-family:'Noto Serif SC',serif;line-height:1.4}
+    .shelf-name{font-size:12px;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4}
+    .acct-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:14px}
+    .hist-item{
+      display:flex;align-items:center;gap:12px;
+      padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:opacity .2s;
+    }
+    .hist-item:last-child{border-bottom:none}
+    .hist-item:hover{opacity:.75}
+    .hist-info{flex:1;min-width:0}
+    .hist-title{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hist-ch{font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+    /* ===== LOADING & EMPTY ===== */
+    .loading-wrap{
+      display:flex;flex-direction:column;align-items:center;
+      justify-content:center;padding:60px 20px;gap:14px;
+    }
+    .spinner{
+      width:36px;height:36px;border-radius:50%;
+      border:3px solid var(--border);border-top-color:var(--accent);
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-txt{font-size:14px;color:var(--text3)}
+    .empty-wrap{text-align:center;padding:50px 20px;color:var(--text3)}
+    .empty-icon{font-size:48px;margin-bottom:12px}
+    .empty-txt{font-size:15px}
+    .empty-sub{font-size:13px;margin-top:6px;color:var(--text3)}
+
+    /* ===== TOAST ===== */
+    .toast{
+      position:fixed;bottom:28px;left:50%;
+      transform:translateX(-50%) translateY(80px);
+      background:var(--text);color:var(--bg);
+      padding:11px 22px;border-radius:40px;
+      font-size:14px;z-index:900;
+      transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+      white-space:nowrap;pointer-events:none;
+    }
+    .toast.show{transform:translateX(-50%) translateY(0)}
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:600px){
+      .hero{padding:32px 12px 20px}
+      .book-hero{flex-direction:column;gap:14px}
+      .book-cover-lg{width:80px;height:107px}
+      .reader-body{padding:18px 14px 30px;font-size:calc(var(--font-size) - 1px)}
+      .container{padding:14px 12px}
+    }
+    @media(min-width:900px){
+      .shelf-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+    }
+  </style>
+</head>
+<body>
+  <!-- Reading Progress Bar -->
+  <div id="readProgress"></div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <span class="logo" onclick="nav('home')">
+      <span class="logo-icon">📖</span>墨卷
+    </span>
+    <div class="header-space"></div>
+    <button class="icon-btn" title="主题切换" onclick="cycleTheme()">🌙</button>
+    <button class="icon-btn" title="我的书架" onclick="nav('account')">👤</button>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main>
+
+    <!-- HOME PAGE -->
+    <div id="pg-home" class="page active">
+      <div class="hero">
+        <div class="hero-title">万卷藏书，一键畅读</div>
+        <div class="hero-sub">搜索全网小说 · 免费阅读 · 记录书架</div>
+        <div class="search-wrap">
+          <input class="search-input" id="searchInput" type="text"
+            placeholder="书名 / 作者名..."
+            onkeydown="if(event.key==='Enter')doSearch()">
+          <button class="search-btn" onclick="doSearch()">搜索</button>
+        </div>
+        <div class="search-hint">内容来源于互联网，仅供个人学习使用</div>
+      </div>
+
+      <div class="container">
+        <!-- Search Results -->
+        <div id="resultsArea" style="display:none">
+          <div class="sec-title">
+            搜索结果
+            <span class="sec-count" id="resCount"></span>
+          </div>
+          <div id="resList" class="results-list"></div>
+        </div>
+
+        <!-- Recent / Home -->
+        <div id="homeArea">
+          <div id="recentArea"></div>
+          <div class="sep"></div>
+          <div class="tip-box">
+            <div class="tip-title">💡 使用说明</div>
+            · 在搜索框输入书名或作者名，点击书名进入阅读<br>
+            · 阅读中可点击 ⚙️ 调整字号、行距和主题色<br>
+            · 注册账号后可同步书架和阅读进度到多设备<br>
+            · 键盘 ← → 键可快速翻页（桌面端）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOK DETAIL PAGE -->
+    <div id="pg-book" class="page">
+      <div class="container">
+        <span class="back-btn" onclick="nav('home')">← 返回</span>
+        <div id="bookArea"></div>
+      </div>
+    </div>
+
+    <!-- READER PAGE -->
+    <div id="pg-reader" class="page">
+      <div class="reader-wrap" id="readerArea"></div>
+    </div>
+
+    <!-- ACCOUNT PAGE -->
+    <div id="pg-account" class="page">
+      <div class="container">
+        <div id="accountArea"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== SETTINGS SHEET ===== -->
+  <div class="sheet-overlay" id="settingsSheet" onclick="sheetClick(event)">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">阅读设置</div>
+
+      <div class="setting-row">
+        <span class="setting-label">主题背景</span>
+        <div class="theme-dots">
+          <div class="theme-dot" data-t="default" title="暖纸" style="background:#f5f0e8;border:1px solid #ddd0bc" onclick="setTheme('default')"></div>
+          <div class="theme-dot" data-t="dark"    title="夜间" style="background:#0f0e0c" onclick="setTheme('dark')"></div>
+          <div class="theme-dot" data-t="mint"    title="护眼" style="background:#e8f5f0;border:1px solid #b8ddd0" onclick="setTheme('mint')"></div>
+          <div class="theme-dot" data-t="ink"     title="水墨" style="background:#f0eff0;border:1px solid #d4d4d8" onclick="setTheme('ink')"></div>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">字体大小</span>
+        <div class="stepper">
+          <button class="step-btn" onclick="adjFont(-1)">−</button>
+          <span class="step-val" id="fontVal">18</span>px
+          <button class="step-btn" onclick="adjFont(+1)">+</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">行间距</span>
+        <div class="stepper">
+          <button class="step-btn" onclick="adjLineH(-.2)">−</button>
+          <span class="step-val" id="lineHVal">2.0</span>
+          <button class="step-btn" onclick="adjLineH(+.2)">+</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <span class="setting-label">阅读字体</span>
+        <select class="ui-select" id="fontSel" onchange="setFont(this.value)">
+          <option value="serif">宋体风格</option>
+          <option value="sans">黑体风格</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AUTH MODAL ===== -->
+  <div class="modal-bg" id="authModal">
+    <div class="modal-box" style="position:relative">
+      <button class="modal-close" onclick="closeAuth()">×</button>
+      <div class="modal-title">欢迎使用墨卷</div>
+      <div class="modal-sub">登录后可同步书架与阅读进度</div>
+      <div class="tab-row">
+        <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">登录</div>
+        <div class="auth-tab" id="tab-reg" onclick="switchAuthTab('reg')">注册</div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="form-login">
+        <div class="field">
+          <label>邮箱</label>
+          <input type="email" id="l-email" placeholder="your@email.com">
+        </div>
+        <div class="field">
+          <label>密码</label>
+          <input type="password" id="l-pass" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <div class="field-err" id="l-err"></div>
+        <button class="btn-primary" style="width:100%;padding:12px;font-size:15px;margin-top:4px" onclick="doLogin()">登录</button>
+      </div>
+
+      <!-- Register Form -->
+      <div id="form-reg" style="display:none">
+        <div class="field">
+          <label>邮箱</label>
+          <input type="email" id="r-email" placeholder="your@email.com">
+        </div>
+        <div class="field">
+          <label>昵称（可选）</label>
+          <input type="text" id="r-name" placeholder="您的昵称">
+        </div>
+        <div class="field">
+          <label>密码（至少8位）</label>
+          <input type="password" id="r-pass" placeholder="设置密码" onkeydown="if(event.key==='Enter')doReg()">
+        </div>
+        <div class="field-err" id="r-err"></div>
+        <button class="btn-primary" style="width:100%;padding:12px;font-size:15px;margin-top:4px" onclick="doReg()">注册</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+  /* ======================================================
+     CONFIG — 部署前必须修改这两项
+     ====================================================== */
+  const CFG = {
+    // 1. Cloudflare Worker URL (见 README.md)
+    worker: 'https://novel-read.sir-way105.workers.dev',
+    // 2. Supabase 配置 (见 README.md)
+    sbUrl: 'https://kuztkvkhubvstbcdoerh.supabase.co',
+    sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1enRrdmtodWJ2c3RiY2RvZXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNzg3MzAsImV4cCI6MjA5Mzc1NDczMH0.-JhbCP0SOm-FzP4YeI9Df-ubTTELBfIsviFWlmNt6f4',
+  }
+
+  /* ======================================================
+     SETTINGS
+     ====================================================== */
+  const DEF_SETTINGS = { theme:'default', fontSize:18, lineH:2.0, font:'serif' }
+  let S = { ...DEF_SETTINGS, ...JSON.parse(localStorage.getItem('mj_cfg') || '{}') }
+
+  function saveCfg() {
+    localStorage.setItem('mj_cfg', JSON.stringify(S))
+    if (_sb && _user) {
+      _sb.from('user_settings').upsert({
+        user_id: _user.id, ...S, updated_at: new Date().toISOString()
+      }).catch(() => {})
+    }
+  }
+
+  function applySettings() {
+    document.documentElement.setAttribute('data-theme', S.theme === 'default' ? '' : S.theme)
+    document.documentElement.style.setProperty('--font-size', S.fontSize + 'px')
+    document.documentElement.style.setProperty('--line-h', S.lineH)
+    const fonts = {
+      serif: "'Noto Serif SC','SimSun',serif",
+      sans: "'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif"
+    }
+    document.documentElement.style.setProperty('--read-font', fonts[S.font] || fonts.serif)
+    // Update UI
+    document.getElementById('fontVal').textContent = S.fontSize
+    document.getElementById('lineHVal').textContent = S.lineH.toFixed(1)
+    document.getElementById('fontSel').value = S.font
+    document.querySelectorAll('.theme-dot').forEach(d =>
+      d.classList.toggle('active', d.dataset.t === S.theme))
+  }
+
+  function setTheme(t)  { S.theme = t;  applySettings(); saveCfg() }
+  function adjFont(d)   { S.fontSize = Math.max(12, Math.min(30, S.fontSize+d)); applySettings(); saveCfg() }
+  function adjLineH(d)  { S.lineH = +Math.max(1.4, Math.min(3.2, S.lineH+d)).toFixed(1); applySettings(); saveCfg() }
+  function setFont(f)   { S.font = f; applySettings(); saveCfg() }
+
+  const THEMES = ['default','dark','mint','ink']
+  function cycleTheme() {
+    const i = THEMES.indexOf(S.theme)
+    setTheme(THEMES[(i+1) % THEMES.length])
+    const labels = { default:'暖纸模式', dark:'夜间模式', mint:'护眼模式', ink:'水墨模式' }
+    toast(labels[S.theme])
+  }
+
+  function openSettings() {
+    document.getElementById('settingsSheet').classList.add('open')
+    applySettings()
+  }
+  function sheetClick(e) {
+    if (e.target === document.getElementById('settingsSheet'))
+      document.getElementById('settingsSheet').classList.remove('open')
+  }
+
+  /* ======================================================
+     SUPABASE
+     ====================================================== */
+  let _sb = null, _user = null
+
+  function initSB() {
+    try {
+      _sb = supabase.createClient(CFG.sbUrl, CFG.sbKey)
+      _sb.auth.getSession().then(({ data: { session } }) => {
+        _user = session?.user || null
+      })
+      _sb.auth.onAuthStateChange((ev, session) => {
+        _user = session?.user || null
+        if (ev === 'SIGNED_IN') {
+          toast('登录成功 👋')
+          syncToCloud()
+        }
+      })
+    } catch (e) {
+      console.warn('Supabase 未配置，将使用本地存储')
+    }
+  }
+
+  async function syncToCloud() {
+    if (!_sb || !_user) return
+    const hist = getHist()
+    for (const h of hist.slice(0, 20)) {
+      await _sb.from('reading_history').upsert({
+        user_id: _user.id,
+        book_url: h.bookUrl, book_title: h.bookTitle,
+        book_author: h.bookAuthor, book_cover: h.bookCover,
+        chapter_url: h.chapterUrl, chapter_title: h.chapterTitle,
+        chapter_index: h.chapterIdx || 0, total_chapters: h.totalCh || 0,
+        updated_at: h.updatedAt
+      }, { onConflict: 'user_id,book_url' }).catch(() => {})
+    }
+  }
+
+  /* ======================================================
+     ROUTING
+     ====================================================== */
+  let curPage = 'home'
+
+  function nav(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+    document.getElementById('pg-' + page).classList.add('active')
+    curPage = page
+    window.scrollTo(0, 0)
+    if (page === 'home') renderHome()
+    if (page === 'account') renderAccount()
+  }
+
+  /* ======================================================
+     TOAST
+     ====================================================== */
+  let _toastT
+  function toast(msg, ms = 2200) {
+    const el = document.getElementById('toast')
+    el.textContent = msg
+    el.classList.add('show')
+    clearTimeout(_toastT)
+    _toastT = setTimeout(() => el.classList.remove('show'), ms)
+  }
+
+  /* ======================================================
+     API
+     ====================================================== */
+  async function api(action, param) {
+    const url = new URL('https://novel-read.sir-way105.workers.dev/')
+    url.searchParams.set('a', action)
+    url.searchParams.set('p', param)
+    const res = await fetch(url.toString())
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const data = await res.json()
+    if (data.error) throw new Error(data.error)
+    return data
+  }
+
+  /* ======================================================
+     SEARCH
+     ====================================================== */
+  async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim()
+    if (!q) { toast('请输入搜索内容'); return }
+
+    document.getElementById('resultsArea').style.display = 'block'
+    document.getElementById('homeArea').style.display = 'none'
+    document.getElementById('resCount').textContent = ''
+    document.getElementById('resList').innerHTML = renderLoading('搜索中...')
+
+    try {
+      const data = await api('search', q)
+      const list = data.results || []
+      document.getElementById('resCount').textContent = `共 ${list.length} 条`
+
+      if (!list.length) {
+        document.getElementById('resList').innerHTML = renderEmpty('🔍', '未找到相关小说', '换个关键词试试')
+        return
+      }
+
+      document.getElementById('resList').innerHTML = list.map(r => `
+        <div class="result-card" onclick="openBook(${JSON.stringify(JSON.stringify(r))})">
+          <div class="mini-cover">
+            ${r.cover
+              ? `<img src="${esc(r.cover)}" onerror="this.parentNode.innerHTML='<div class=\\'mini-cover-txt\\'>${esc(r.title.slice(0,4))}</div>'" loading="lazy">`
+              : `<div class="mini-cover-txt">${esc(r.title.slice(0,4))}</div>`}
+          </div>
+          <div class="result-info">
+            <div class="result-title">${esc(r.title)}</div>
+            <div class="result-meta">✍️ ${esc(r.author || '未知')}</div>
+            ${r.latestChapter ? `<div class="result-latest">最新：${esc(r.latestChapter)}</div>` : ''}
+          </div>
+          <div class="result-arrow">›</div>
+        </div>
+      `).join('')
+
+    } catch (e) {
+      document.getElementById('resList').innerHTML = renderEmpty('⚠️', '搜索失败：' + e.message, '请检查 Worker 是否已部署并配置正确')
+    }
+  }
+
+  function renderHome() {
+    document.getElementById('resultsArea').style.display = 'none'
+    document.getElementById('homeArea').style.display = 'block'
+    document.getElementById('searchInput').value = ''
+    renderRecentList()
+  }
+
+  /* ======================================================
+     READING HISTORY (localStorage)
+     ====================================================== */
+  function getHist() { return JSON.parse(localStorage.getItem('mj_hist') || '[]') }
+  function saveHist(hist) { localStorage.setItem('mj_hist', JSON.stringify(hist.slice(0, 60))) }
+  function getShelf() { return JSON.parse(localStorage.getItem('mj_shelf') || '[]') }
+  function saveShelf(s) { localStorage.setItem('mj_shelf', JSON.stringify(s)) }
+
+  function getBookProgress(bookUrl) {
+    return getHist().find(h => h.bookUrl === bookUrl) || null
+  }
+
+  function recordProgress(data) {
+    const hist = getHist().filter(h => h.bookUrl !== data.bookUrl)
+    hist.unshift({ ...data, updatedAt: new Date().toISOString() })
+    saveHist(hist)
+    // Cloud sync
+    if (_sb && _user) {
+      _sb.from('reading_history').upsert({
+        user_id: _user.id,
+        book_url: data.bookUrl, book_title: data.bookTitle,
+        book_author: data.bookAuthor, book_cover: data.bookCover,
+        chapter_url: data.chapterUrl, chapter_title: data.chapterTitle,
+        chapter_index: data.chapterIdx, total_chapters: data.totalCh,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,book_url' }).catch(() => {})
+    }
+  }
+
+  function renderRecentList() {
+    const hist = getHist()
+    const el = document.getElementById('recentArea')
+    if (!hist.length) {
+      el.innerHTML = `<div class="empty-wrap"><div class="empty-icon">📚</div><div class="empty-txt">暂无阅读记录</div><div class="empty-sub">搜索小说开始阅读吧</div></div>`
+      return
+    }
+    el.innerHTML = `
+      <div class="sec-title">继续阅读</div>
+      <div class="recent-list">
+        ${hist.slice(0, 8).map(h => `
+          <div class="recent-item" onclick="openBookFromHist(${JSON.stringify(JSON.stringify(h))})">
+            <div class="mini-cover" style="width:42px;height:56px;border-radius:6px;flex-shrink:0">
+              ${h.bookCover
+                ? `<img src="${esc(h.bookCover)}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover">`
+                : `<div class="mini-cover-txt">${esc((h.bookTitle||'').slice(0,2))}</div>`}
+            </div>
+            <div class="recent-info">
+              <div class="recent-title">${esc(h.bookTitle)}</div>
+              <div class="recent-ch">读到：${esc(h.chapterTitle || '')}</div>
+            </div>
+            <button class="continue-btn" onclick="event.stopPropagation();readFromHist(${JSON.stringify(JSON.stringify(h))})">继续</button>
+          </div>
+        `).join('')}
+      </div>`
+  }
+
+  function openBookFromHist(jsonStr) {
+    const h = JSON.parse(jsonStr)
+    openBook(JSON.stringify({ url: h.bookUrl, title: h.bookTitle, author: h.bookAuthor, cover: h.bookCover }))
+  }
+
+  function readFromHist(jsonStr) {
+    const h = JSON.parse(jsonStr)
+    openReader(h.chapterUrl, h.chapterIdx || 0, {
+      url: h.bookUrl, title: h.bookTitle, author: h.bookAuthor, cover: h.bookCover
+    }, [])
+  }
+
+  /* ======================================================
+     BOOK DETAIL
+     ====================================================== */
+  let _curBook = null
+  let _chFull = []
+  let _showAllCh = false
+
+  function openBook(jsonStr) {
+    const info = JSON.parse(jsonStr)
+    _curBook = info
+    _chFull = []
+    _showAllCh = false
+    nav('book')
+    document.getElementById('bookArea').innerHTML = renderLoading('加载书籍...')
+
+    api('book', info.url).then(book => {
+      _curBook = book
+      _chFull = book.chapters || []
+      renderBookPage()
+    }).catch(e => {
+      document.getElementById('bookArea').innerHTML = renderEmpty('⚠️', '加载失败', e.message)
+    })
+  }
+
+  function renderBookPage() {
+    const book = _curBook
+    const progress = getBookProgress(book.url)
+    const shelf = getShelf()
+    const onShelf = shelf.some(b => b.url === book.url)
+    const curIdx = progress ? _chFull.findIndex(c => c.url === progress.chapterUrl) : -1
+    const LIMIT = 60
+    const chapters = _showAllCh ? _chFull : _chFull.slice(0, LIMIT)
+
+    document.getElementById('bookArea').innerHTML = `
+      <div class="book-hero">
+        <div class="book-cover-lg">
+          ${book.cover
+            ? `<img src="${esc(book.cover)}" onerror="this.style.display='none'" loading="lazy"><div class="book-cover-txt" style="display:none">${esc(book.title.slice(0,4))}</div>`
+            : `<div class="book-cover-txt">${esc(book.title.slice(0,4))}</div>`}
+        </div>
+        <div class="book-detail-meta">
+          <div class="book-title">${esc(book.title)}</div>
+          <div class="book-author">✍️ ${esc(book.author)}</div>
+          <div class="book-stats">共 ${_chFull.length} 章</div>
+          <div class="book-btns">
+            ${progress
+              ? `<button class="btn-primary" onclick="openReader('${esc(progress.chapterUrl)}',${progress.chapterIdx||0},null,[])">继续阅读</button>`
+              : (_chFull.length
+                  ? `<button class="btn-primary" onclick="openReader('${esc(_chFull[0].url)}',0,null,[])">开始阅读</button>`
+                  : '')}
+            <button class="btn-secondary" id="shelfBtn" onclick="toggleShelf()">
+              ${onShelf ? '❤️ 已收藏' : '🤍 收藏'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      ${book.intro ? `
+        <div class="book-intro-box">
+          <div class="book-intro-title">简介</div>
+          ${esc(book.intro)}
+        </div>` : ''}
+
+      <div class="sec-title">
+        目录
+        <span class="sec-count">${_chFull.length} 章</span>
+      </div>
+      <div class="ch-list-wrap" id="chList">
+        ${chapters.map((ch, i) => `
+          <div class="ch-item ${i === curIdx ? 'ch-current' : ''}"
+               onclick="openReader('${esc(ch.url)}',${i},null,[])">
+            <span>${esc(ch.title)}</span>
+            ${i === curIdx ? '<span class="ch-current-dot"></span>' : ''}
+          </div>
+        `).join('')}
+        ${!_showAllCh && _chFull.length > LIMIT
+          ? `<div class="show-more-btn" onclick="showAllChapters()">展开全部 ${_chFull.length} 章 ↓</div>`
+          : ''}
+      </div>
+    `
+  }
+
+  function showAllChapters() {
+    _showAllCh = true
+    renderBookPage()
+  }
+
+  function toggleShelf() {
+    if (!_curBook) return
+    let shelf = getShelf()
+    const idx = shelf.findIndex(b => b.url === _curBook.url)
+    if (idx >= 0) {
+      shelf.splice(idx, 1)
+      toast('已从书架移除')
+      document.getElementById('shelfBtn').innerHTML = '🤍 收藏'
+    } else {
+      shelf.unshift({ url: _curBook.url, title: _curBook.title, author: _curBook.author, cover: _curBook.cover })
+      toast('已加入书架 ❤️')
+      document.getElementById('shelfBtn').innerHTML = '❤️ 已收藏'
+    }
+    saveShelf(shelf)
+    if (_sb && _user) {
+      _sb.from('bookmarks').upsert({
+        user_id: _user.id,
+        book_url: _curBook.url, book_title: _curBook.title,
+        book_author: _curBook.author, book_cover: _curBook.cover
+      }, { onConflict: 'user_id,book_url' }).catch(() => {})
+    }
+  }
+
+  /* ======================================================
+     READER
+     ====================================================== */
+  let _rState = { book: null, chIdx: 0, chapters: [], nextUrl: null, prevUrl: null }
+
+  async function openReader(chapterUrl, chIdx, book, chapters) {
+    if (book) _rState.book = book
+    if (chapters && chapters.length) _rState.chapters = chapters
+    else if (_curBook) { _rState.book = _curBook; _rState.chapters = _chFull }
+    _rState.chIdx = chIdx
+
+    nav('reader')
+    document.getElementById('readerArea').innerHTML = `
+      <div style="padding:16px"><span class="back-btn" onclick="nav('book')">← 返回</span></div>
+      ${renderLoading('加载章节...')}`
+
+    try {
+      const data = await api('chapter', chapterUrl)
+      _rState.nextUrl = data.nextUrl
+      _rState.prevUrl = data.prevUrl
+      renderChapter(data, chapterUrl, chIdx)
+
+      // Record progress
+      if (_rState.book) {
+        recordProgress({
+          bookUrl: _rState.book.url, bookTitle: _rState.book.title,
+          bookAuthor: _rState.book.author, bookCover: _rState.book.cover,
+          chapterUrl, chapterTitle: data.title,
+          chapterIdx: chIdx, totalCh: _rState.chapters.length
+        })
+      }
+    } catch (e) {
+      document.getElementById('readerArea').innerHTML = `
+        <div style="padding:16px">
+          <span class="back-btn" onclick="nav('book')">← 返回</span>
+          ${renderEmpty('⚠️', '章节加载失败', e.message)}
+          <div style="text-align:center;margin-top:16px">
+            <button class="btn-primary" onclick="openReader('${esc(chapterUrl)}',${chIdx},null,null)">重试</button>
+          </div>
+        </div>`
+    }
+  }
+
+  function renderChapter(data, url, idx) {
+    const total = _rState.chapters.length
+    const hasPrev = idx > 0 || _rState.prevUrl
+    const hasNext = (idx + 1 < total) || _rState.nextUrl
+
+    document.getElementById('readerArea').innerHTML = `
+      <div class="reader-top">
+        <span class="back-btn" onclick="nav('book')" style="margin:0;padding:0 8px 0 0">←</span>
+        <div class="reader-chapter-title">${esc(data.title)}</div>
+        <button class="icon-btn" onclick="openSettings()" title="阅读设置">⚙️</button>
+      </div>
+
+      <div class="reader-body" id="rBody">${formatContent(data.content)}</div>
+
+      ${total ? `<div class="ch-progress">第 ${idx+1} 章 / 共 ${total} 章</div>` : ''}
+
+      <div class="reader-nav-bar">
+        <button class="${hasPrev ? 'btn-secondary' : 'btn-secondary'}"
+          style="${!hasPrev ? 'opacity:.4;cursor:not-allowed' : ''}"
+          ${!hasPrev ? 'disabled' : ''}
+          onclick="goChapter(-1)">← 上一章</button>
+        <button class="btn-secondary" onclick="nav('book')" style="flex:0.6">目录</button>
+        <button class="${hasNext ? 'btn-primary' : 'btn-secondary'}"
+          style="${!hasNext ? 'opacity:.4;cursor:not-allowed' : ''}"
+          ${!hasNext ? 'disabled' : ''}
+          onclick="goChapter(1)">下一章 →</button>
+      </div>
+    `
+
+    window.scrollTo(0, 0)
+    setupScrollProgress()
+  }
+
+  function formatContent(raw) {
+    if (!raw) return '<p>内容为空</p>'
+    // Split by newlines, wrap in paragraphs
+    return raw.split(/\n+/).filter(l => l.trim()).map(l =>
+      `<p>${esc(l.trim())}</p>`
+    ).join('')
+  }
+
+  function goChapter(dir) {
+    const { chIdx, chapters, nextUrl, prevUrl } = _rState
+    if (dir === 1) {
+      if (chIdx + 1 < chapters.length) openReader(chapters[chIdx+1].url, chIdx+1, null, null)
+      else if (nextUrl) openReader(nextUrl, chIdx+1, null, null)
+    } else {
+      if (chIdx > 0) openReader(chapters[chIdx-1].url, chIdx-1, null, null)
+      else if (prevUrl) openReader(prevUrl, chIdx-1, null, null)
+    }
+  }
+
+  function setupScrollProgress() {
+    const bar = document.getElementById('readProgress')
+    const onScroll = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight
+      bar.style.width = h > 0 ? (window.scrollY / h * 100) + '%' : '0'
+    }
+    window.removeEventListener('scroll', window._scrollHandler)
+    window._scrollHandler = onScroll
+    window.addEventListener('scroll', onScroll, { passive: true })
+  }
+
+  /* ======================================================
+     ACCOUNT PAGE
+     ====================================================== */
+  function renderAccount() {
+    const el = document.getElementById('accountArea')
+    const shelf = getShelf()
+    const hist = getHist()
+
+    const userBlock = _user
+      ? `<div class="user-card">
+           <div class="avatar">${(_user.email||'U')[0].toUpperCase()}</div>
+           <div class="user-info">
+             <div class="user-name">${esc(_user.user_metadata?.display_name || _user.email.split('@')[0])}</div>
+             <div class="user-email">${esc(_user.email)}</div>
+           </div>
+           <button class="btn-secondary" style="flex-shrink:0" onclick="doLogout()">退出</button>
+         </div>`
+      : `<div class="user-card" style="flex-direction:column;text-align:center;padding:28px 20px;gap:12px">
+           <div style="font-size:48px">📖</div>
+           <div style="font-size:16px;font-weight:600;color:var(--text)">登录账号</div>
+           <div style="font-size:13px;color:var(--text3)">登录后可同步书架和阅读记录到多台设备</div>
+           <button class="btn-primary" style="align-self:center;padding:10px 28px" onclick="openAuth()">登录 / 注册</button>
+         </div>`
+
+    const shelfBlock = shelf.length
+      ? `<div class="acct-section">
+           <div class="sec-title">我的书架 <span class="sec-count">${shelf.length}</span></div>
+           <div class="shelf-grid">
+             ${shelf.map(b => `
+               <div class="shelf-card" onclick="openBook(${JSON.stringify(JSON.stringify(b))})">
+                 <div class="shelf-thumb">
+                   ${b.cover
+                     ? `<img src="${esc(b.cover)}" onerror="this.style.display='none'" loading="lazy">`
+                     : `<div class="shelf-thumb-txt">${esc((b.title||'').slice(0,4))}</div>`}
+                 </div>
+                 <div class="shelf-name">${esc(b.title)}</div>
+               </div>
+             `).join('')}
+           </div>
+         </div>`
+      : `<div class="acct-section">
+           <div class="sec-title">我的书架</div>
+           ${renderEmpty('📚', '书架还是空的', '阅读时点击「收藏」加入书架')}
+         </div>`
+
+    const histBlock = hist.length
+      ? `<div class="acct-section">
+           <div class="sec-title">阅读历史 <span class="sec-count">${hist.length}</span></div>
+           ${hist.slice(0, 20).map(h => `
+             <div class="hist-item" onclick="openBookFromHist(${JSON.stringify(JSON.stringify(h))})">
+               <div class="hist-info">
+                 <div class="hist-title">${esc(h.bookTitle)}</div>
+                 <div class="hist-ch">读到：${esc(h.chapterTitle || '')} · ${relTime(h.updatedAt)}</div>
+               </div>
+               <span style="color:var(--text3);font-size:18px">›</span>
+             </div>
+           `).join('')}
+         </div>` : ''
+
+    el.innerHTML = userBlock + shelfBlock + histBlock
+  }
+
+  function relTime(iso) {
+    if (!iso) return ''
+    const s = (Date.now() - new Date(iso)) / 1000
+    if (s < 60) return '刚刚'
+    if (s < 3600) return Math.floor(s/60) + '分钟前'
+    if (s < 86400) return Math.floor(s/3600) + '小时前'
+    return Math.floor(s/86400) + '天前'
+  }
+
+  /* ======================================================
+     AUTH
+     ====================================================== */
+  function openAuth() { document.getElementById('authModal').classList.add('open') }
+  function closeAuth() { document.getElementById('authModal').classList.remove('open') }
+
+  function switchAuthTab(t) {
+    document.getElementById('form-login').style.display = t === 'login' ? 'block' : 'none'
+    document.getElementById('form-reg').style.display = t === 'reg' ? 'block' : 'none'
+    document.getElementById('tab-login').classList.toggle('active', t === 'login')
+    document.getElementById('tab-reg').classList.toggle('active', t === 'reg')
+  }
+
+  async function doLogin() {
+    if (!_sb) { toast('请先配置 Supabase（见 README）'); return }
+    const email = document.getElementById('l-email').value
+    const pass  = document.getElementById('l-pass').value
+    document.getElementById('l-err').textContent = ''
+    try {
+      const { error } = await _sb.auth.signInWithPassword({ email, password: pass })
+      if (error) throw error
+      closeAuth()
+      renderAccount()
+    } catch (e) {
+      document.getElementById('l-err').textContent = e.message
+    }
+  }
+
+  async function doReg() {
+    if (!_sb) { toast('请先配置 Supabase（见 README）'); return }
+    const email = document.getElementById('r-email').value
+    const pass  = document.getElementById('r-pass').value
+    const name  = document.getElementById('r-name').value
+    document.getElementById('r-err').textContent = ''
+    if (pass.length < 8) { document.getElementById('r-err').textContent = '密码至少8位'; return }
+    try {
+      const { error } = await _sb.auth.signUp({ email, password: pass, options: { data: { display_name: name } } })
+      if (error) throw error
+      toast('注册成功！请检查邮箱完成验证', 3500)
+      closeAuth()
+    } catch (e) {
+      document.getElementById('r-err').textContent = e.message
+    }
+  }
+
+  async function doLogout() {
+    if (_sb) await _sb.auth.signOut()
+    _user = null
+    toast('已退出登录')
+    renderAccount()
+  }
+
+  /* ======================================================
+     UTILS
+     ====================================================== */
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+  }
+
+  function renderLoading(txt = '加载中...') {
+    return `<div class="loading-wrap"><div class="spinner"></div><div class="loading-txt">${txt}</div></div>`
+  }
+
+  function renderEmpty(icon, txt, sub = '') {
+    return `<div class="empty-wrap"><div class="empty-icon">${icon}</div><div class="empty-txt">${txt}</div>${sub ? `<div class="empty-sub">${sub}</div>` : ''}</div>`
+  }
+
+  /* ======================================================
+     INIT
+     ====================================================== */
+  document.addEventListener('DOMContentLoaded', () => {
+    applySettings()
+    initSB()
+    renderRecentList()
+
+    // Keyboard nav in reader
+    document.addEventListener('keydown', e => {
+      if (curPage !== 'reader') return
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') goChapter(1)
+      if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   goChapter(-1)
+      if (e.key === 'Escape') nav('book')
+    })
+
+    // Close modals on backdrop click
+    document.getElementById('authModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('authModal')) closeAuth()
+    })
+  })
+  </script>
+</body>
+</html>
