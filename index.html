@@ -407,31 +407,146 @@ async function doSearch(){
 /* READER STATE */
 let _burl='',_btitle='',_chs=[],_idx=0,_loaded=false,_pu=null,_nu=null
 
-/* ENTER READER - 直接进阅读页 */
+/* ENTER READER */
 async function enterReader(su,st){
   _burl=decodeURIComponent(su);_btitle=decodeURIComponent(st)
-  _chs=[];_idx=0;_loaded=false;_pu=null;_nu=null
+  _chs=[];_idx=0;_loaded=false;_pu=null;_nu=null;_dbBookId=null
   showPage('readerPage')
   document.getElementById('tbbook').textContent=_btitle
-  document.getElementById('tbch').textContent='目录加载中…'
+  document.getElementById('tbch').textContent='加载中…'
   document.getElementById('sbttl').textContent=_btitle
   document.getElementById('sbcnt').textContent=''
   document.getElementById('chtitle').textContent='加载中…'
-  document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">正在解析书籍目录…</p>'
-  document.getElementById('clist').innerHTML='<div style="padding:18px;color:var(--text3);font-size:12px;text-align:center">目录加载中…</div>'
+  document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">正在加载…</p>'
+  document.getElementById('clist').innerHTML='<div style="padding:18px;color:var(--text3);font-size:12px;text-align:center">加载中…</div>'
   setNav(false,false)
   addHist(_burl,_btitle,0)
-  // 并行加载目录
-  fetchBook()
+  // 先查数据库，有则秒开；无则实时抓取
+  const dbBook = await findInDB(_btitle)
+  if(dbBook){
+    _dbBookId=dbBook.id
+    await loadFromDB(dbBook)
+  }else{
+    // 数据库没有 → 并行：搜第一章 + 后台加载目录
+    document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">数据库中暂无此书，正在实时搜索（约5-15秒）…</p>'
+    Promise.all([loadFirstChapter(), fetchBook()])
+  }
+}
+
+// 查 D1 数据库（通过 Worker）
+async function findInDB(title){
+  try{
+    const kw=title.replace(/[《》\s]/g,'').slice(0,15)
+    const d=await api('db_search',kw)
+    return d.books&&d.books.length?d.books[0]:null
+  }catch(e){return null}
+}
+
+// 从 D1 加载书籍（秒开）
+async function loadFromDB(book){
+  _btitle=book.title;_dbBookId=book.id
+  document.getElementById('tbbook').textContent=book.title
+  document.getElementById('sbttl').textContent=book.title
+  document.getElementById('sbcnt').textContent='加载目录中…'
+  try{
+    const u=new URL(CFG.worker)
+    u.searchParams.set('a','db_chapters')
+    u.searchParams.set('p',book.id)
+    const r=await fetch(u.toString())
+    const d=await r.json()
+    if(!d.chapters||!d.chapters.length){
+      document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">数据库中暂无章节，请先运行 scraper_d1.py 下载。</p>'
+      document.getElementById('sbcnt').textContent='0章'
+      return
+    }
+    _chs=d.chapters.map(c=>({...c,url:null}))
+    _loaded=true
+    document.getElementById('sbcnt').textContent=_chs.length+'章（数据库）'
+    renderClist()
+    const h=getHist().find(x=>x.url===_burl)
+    const si=Math.min(h?.idx||0,_chs.length-1)
+    loadDBChapter(si)
+  }catch(e){
+    document.getElementById('chbody').innerHTML=`<p style="color:var(--text3)">数据库读取失败：${esc(e.message)}</p>`
+  }
+}
+
+// 从 D1 读章节正文（毫秒级）
+async function loadDBChapter(idx){
+  if(!_dbBookId)return
+  _idx=idx
+  const ch=_chs[idx]
+  if(!ch)return
+  document.getElementById('chtitle').textContent=ch.title
+  document.getElementById('tbch').textContent=ch.title
+  document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">加载中…</p>'
+  document.getElementById('rpf').style.width='0'
+  document.getElementById('cwrap').scrollTop=0
+  hlCh(idx)
+  try{
+    const u=new URL(CFG.worker)
+    u.searchParams.set('a','db_chapter')
+    u.searchParams.set('p',_dbBookId)
+    u.searchParams.set('idx',idx)
+    const r=await fetch(u.toString())
+    const d=await r.json()
+    if(d.error)throw new Error(d.error)
+    document.getElementById('chtitle').textContent=d.title
+    document.getElementById('tbch').textContent=d.title
+    const ps=d.content.split('\n').filter(p=>p.trim())
+    document.getElementById('chbody').innerHTML=ps.length
+      ?ps.map(p=>`<p>${esc(p.trim())}</p>`).join('')
+      :'<p style="color:var(--text3)">内容为空</p>'
+    setNav(idx>0,idx<_chs.length-1)
+    addHist(_burl,_btitle,idx)
+    setupProg()
+  }catch(e){
+    document.getElementById('chbody').innerHTML=`<p style="color:var(--text3)">加载失败：${esc(e.message)}</p>`
+  }
+}
+
+async function loadFirstChapter(){
+  try{
+    const u=new URL(CFG.worker)
+    u.searchParams.set('a','chapter1')
+    u.searchParams.set('p',_burl)
+    u.searchParams.set('title',encodeURIComponent(_btitle))
+    const r=await fetch(u.toString())
+    if(!r.ok)throw new Error('HTTP '+r.status)
+    const d=await r.json()
+    if(d.error)throw new Error(d.error)
+    // 渲染正文
+    renderChapterContent(d)
+  }catch(e){
+    // chapter1 失败 → 再等目录加载完（fetchBook会自动加载第一章）
+    document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:12px">自动搜索失败，正在等待目录加载…</p><a href="${_burl}" target="_blank" style="color:var(--accent)">或在原网站阅读 ↗</a>`
+  }
+}
+
+function renderChapterContent(d){
+  const title=d.title||'未知章节'
+  document.getElementById('chtitle').textContent=title
+  document.getElementById('tbch').textContent=title
+  const ps=(d.content||'').split('\n').filter(p=>p.trim())
+  document.getElementById('chbody').innerHTML=ps.length
+    ?ps.map(p=>`<p>${esc(p.trim())}</p>`).join('')
+    :`<p style="color:var(--text3)">内容为空。</p><p><a href="${d.url||_burl}" target="_blank" style="color:var(--accent)">原网站阅读 ↗</a></p>`
+  _pu=d.prevUrl;_nu=d.nextUrl
+  const hp=_pu||(_chs.length>0&&_idx>0)
+  const hn=_pu||_nu||(_chs.length>1)
+  setNav(hp,hn)
+  setupProg()
+  if(d.url) _curChUrl=d.url
 }
 
 async function fetchBook(){
-  // 15秒超时提示
   const t=setTimeout(()=>{
     if(!_loaded){
-      document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:12px">目录解析较慢，该网站可能访问受限。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
+      const clist=document.getElementById('clist')
+      if(clist.innerHTML.includes('加载中'))
+        clist.innerHTML=`<div style="padding:18px;text-align:center"><p style="color:var(--text3);font-size:12px;margin-bottom:10px">目录解析失败</p><a href="${_burl}" target="_blank" style="color:var(--accent);font-size:12px">原网站 ↗</a></div>`
     }
-  },15000)
+  },18000)
   try{
     const d=await api('book',_burl)
     _btitle=d.title||_btitle
@@ -443,7 +558,15 @@ async function fetchBook(){
     renderClist()
     if(_chs.length>0){
       const h=getHist().find(x=>x.url===_burl)
-      fetchChapter(_chs[h?.idx||0]?.url||_chs[0].url, _chs[h?.idx||0]?.title||_chs[0].title, h?.idx||0)
+      // 只有在正文还没加载出来时，才自动加载第一章
+      const bodyEl=document.getElementById('chbody')
+      const bodyEmpty=bodyEl.textContent.includes('解析')||bodyEl.textContent.includes('搜索')||bodyEl.textContent.includes('失败')||bodyEl.children.length===0
+      if(bodyEmpty){
+        fetchChapter(_chs[h?.idx||0]?.url||_chs[0].url, _chs[h?.idx||0]?.title||_chs[0].title, h?.idx||0)
+      }
+      // 更新导航按钮
+      const hn=_chs.length>1
+      setNav(_pu||false, _nu||hn)
     }else{
       document.getElementById('chtitle').textContent=_btitle
       document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:14px">暂无法解析该网站目录。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
@@ -468,9 +591,17 @@ function renderClist(){
 }
 function loadMore(){_slim+=200;renderClist()}
 
-/* FETCH CHAPTER */
+let _dbBookId=null
+
+/* FETCH CHAPTER - 自动判断走DB还是实时 */
 async function fetchChapter(su,htitle,idx){
-  const url=typeof su==='string'&&su.startsWith('http')?su:decodeURIComponent(su)
+  // 如果是DB模式
+  if(_dbBookId&&(!su||su==='null')){
+    loadDBChapter(idx!==undefined?idx:_idx)
+    return
+  }
+  const url=typeof su==='string'&&su.startsWith('http')?su:(su?decodeURIComponent(su):null)
+  if(!url){loadDBChapter(idx!==undefined?idx:_idx);return}
   if(idx!==undefined)_idx=idx
   document.getElementById('chtitle').textContent=htitle||'加载中…'
   document.getElementById('tbch').textContent=htitle||'加载中…'
@@ -510,10 +641,12 @@ function setNav(p,n){
   ['bn1','bn2'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=!n})
 }
 function loadPrev(){
+  if(_dbBookId){if(_idx>0)loadDBChapter(_idx-1);return}
   if(_idx>0){const c=_chs[_idx-1];fetchChapter(c.url,c.title,_idx-1);return}
   if(_pu)fetchChapter(_pu,'上一章')
 }
 function loadNext(){
+  if(_dbBookId){if(_idx<_chs.length-1)loadDBChapter(_idx+1);return}
   if(_idx<_chs.length-1){const c=_chs[_idx+1];fetchChapter(c.url,c.title,_idx+1);return}
   if(_nu)fetchChapter(_nu,'下一章')
 }
