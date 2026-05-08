@@ -757,14 +757,23 @@ async function loadBook(){
     document.getElementById('bookIntro').textContent=data.intro||'暂无简介'
     _chapters=data.chapters||[]
     document.getElementById('chapCount').textContent=_chapters.length+'章'
-    renderChapters()
+    if(_chapters.length===0){
+      document.getElementById('chapterList').innerHTML=`
+        <div class="empty">
+          <div class="icon">🔒</div>
+          <p style="margin-bottom:8px">该网站暂不支持自动解析</p>
+          <p style="font-size:12px;color:var(--text3);margin-bottom:16px">可能是付费平台或有反爬保护</p>
+          <a href="${_bookUrl}" target="_blank" class="btn btn-outline" style="display:inline-flex">在原网站阅读 ↗</a>
+        </div>`
+    } else {
+      renderChapters()
+    }
   }catch(e){
-    // 加载失败时，仍显示书名和直达按钮
-    document.getElementById('bookIntro').textContent='目录加载失败，可直接从搜索结果页访问'
+    document.getElementById('bookIntro').textContent='目录加载失败'
     document.getElementById('chapterList').innerHTML=`
       <div class="empty">
         <div class="icon">⚠️</div>
-        <p style="margin-bottom:16px">该网站不支持自动解析</p>
+        <p style="margin-bottom:16px">无法自动解析该网站</p>
         <a href="${_bookUrl}" target="_blank" class="btn btn-outline" style="display:inline-flex">在原网站打开 ↗</a>
       </div>`
   }
