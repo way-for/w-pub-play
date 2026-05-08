@@ -5,958 +5,587 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>墨卷 · 免费小说阅读</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
-<!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;500&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
 <style>
-/* ══════════════════════════════════════════════
-   RESET & ROOT VARIABLES
-══════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f0e0c;
-  --bg2:#181714;
-  --surface:#1e1c18;
-  --surface2:#252320;
-  --border:#2e2b26;
-  --text:#e8dfc8;
-  --text2:#a89880;
-  --text3:#6b5f50;
-  --accent:#c8943a;
-  --accent2:#a87830;
-  --accent-glow:rgba(200,148,58,.18);
-  --r:10px;
-  --font-size:18px;
-  --line-h:2.0;
-  --read-font:'Noto Serif SC',serif;
-  --ui-font:'Noto Sans SC',sans-serif;
-  --trans:.22s cubic-bezier(.4,0,.2,1);
+  --bg:#0f0e0c;--bg2:#181714;--surface:#1e1c18;--surface2:#252320;
+  --border:#2e2b26;--text:#e8dfc8;--text2:#a89880;--text3:#6b5f50;
+  --accent:#c8943a;--accent2:#a87830;--glow:rgba(200,148,58,.14);
+  --r:8px;--fs:18px;--lh:2.0;--rfont:'Noto Serif SC',serif;--ufont:'Noto Sans SC',sans-serif;
+  --sw:260px;--trans:.2s ease;
 }
-[data-theme="warm"]{
-  --bg:#f5f0e8;--bg2:#ede7da;--surface:#fdfaf5;--surface2:#f2ece1;
-  --border:#ddd0bc;--text:#2c2416;--text2:#6b5e4e;--text3:#a8967e;
-  --accent:#8b4513;--accent2:#6d3410;--accent-glow:rgba(139,69,19,.12);
-}
-[data-theme="green"]{
-  --bg:#0d1a0f;--bg2:#111f13;--surface:#152418;--surface2:#1a2b1d;
-  --border:#243527;--text:#c8dfc0;--text2:#7a9e78;--text3:#4a6e48;
-  --accent:#4caf50;--accent2:#388e3c;--accent-glow:rgba(76,175,80,.15);
-}
-[data-theme="gray"]{
-  --bg:#f0f0f0;--bg2:#e8e8e8;--surface:#fafafa;--surface2:#f0f0f0;
-  --border:#d0d0d0;--text:#202020;--text2:#606060;--text3:#909090;
-  --accent:#404040;--accent2:#303030;--accent-glow:rgba(64,64,64,.1);
-}
+[data-theme=warm]{--bg:#f5f0e8;--bg2:#ede7da;--surface:#fdfaf5;--surface2:#f2ece1;--border:#ddd0bc;--text:#2c2416;--text2:#6b5e4e;--text3:#a8967e;--accent:#8b4513;--accent2:#6d3410;--glow:rgba(139,69,19,.09)}
+[data-theme=green]{--bg:#0d1a0f;--bg2:#111f13;--surface:#152418;--surface2:#1a2b1d;--border:#243527;--text:#c8dfc0;--text2:#7a9e78;--text3:#4a6e48;--accent:#4caf50;--accent2:#388e3c;--glow:rgba(76,175,80,.11)}
+[data-theme=gray]{--bg:#f2f2f2;--bg2:#e8e8e8;--surface:#fafafa;--surface2:#efefef;--border:#d0d0d0;--text:#1a1a1a;--text2:#555;--text3:#999;--accent:#333;--accent2:#111;--glow:rgba(0,0,0,.05)}
 
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ui-font);overflow-x:hidden}
-body{transition:background var(--trans),color var(--trans)}
-
-/* ══════════════════════════════════════════════
-   LAYOUT PAGES
-══════════════════════════════════════════════ */
-.page{display:none;min-height:100vh;animation:fadeIn .3s ease}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ufont)}
+.page{display:none}
 .page.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* ══════════════════════════════════════════════
-   TOP NAV
-══════════════════════════════════════════════ */
-.nav{
-  position:sticky;top:0;z-index:100;
-  display:flex;align-items:center;gap:12px;
-  padding:12px 20px;
-  background:var(--bg);
-  border-bottom:1px solid var(--border);
-  backdrop-filter:blur(12px);
-}
-.nav-logo{
-  font-family:'ZCOOL XiaoWei',serif;font-size:22px;color:var(--accent);
-  cursor:pointer;letter-spacing:2px;text-decoration:none;flex-shrink:0;
-}
-.nav-back{
-  background:none;border:none;color:var(--text2);cursor:pointer;
-  font-size:20px;padding:4px 8px;border-radius:6px;transition:color var(--trans);
-  display:flex;align-items:center;gap:6px;
-}
-.nav-back:hover{color:var(--accent)}
-.nav-title{flex:1;font-size:14px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nav-actions{display:flex;gap:8px;align-items:center;margin-left:auto;flex-shrink:0}
-.icon-btn{
-  background:none;border:none;color:var(--text2);cursor:pointer;
-  font-size:18px;padding:6px;border-radius:8px;transition:all var(--trans);
-  display:flex;align-items:center;justify-content:center;width:36px;height:36px;
-}
-.icon-btn:hover{color:var(--accent);background:var(--accent-glow)}
-.read-progress{height:2px;background:var(--border);position:relative}
-.read-progress-bar{height:100%;background:var(--accent);transition:width .1s linear;width:0}
+/* ── HOME ── */
+#homePage{min-height:100vh}
+.hnav{display:flex;align-items:center;gap:10px;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:50}
+.logo{font-family:'ZCOOL XiaoWei',serif;font-size:22px;color:var(--accent);letter-spacing:3px;cursor:pointer}
+.hnav .sp{flex:1}
+.ibtn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:17px;padding:6px 10px;border-radius:6px;transition:color var(--trans)}
+.ibtn:hover{color:var(--accent)}
+.hbody{display:flex;flex-direction:column;align-items:center;padding:60px 20px 40px}
+.hero{text-align:center;margin-bottom:36px}
+.hero h1{font-family:'ZCOOL XiaoWei',serif;font-size:clamp(26px,5vw,50px);letter-spacing:5px;margin-bottom:10px}
+.hero h1 em{color:var(--accent);font-style:normal}
+.hero p{color:var(--text3);font-size:13px;letter-spacing:1px}
+.srow{display:flex;width:100%;max-width:600px;border:1px solid var(--border);border-radius:50px;overflow:hidden;background:var(--surface);transition:border-color var(--trans),box-shadow var(--trans)}
+.srow:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+.sinput{flex:1;padding:14px 20px;font-size:16px;background:none;border:none;outline:none;color:var(--text);font-family:var(--ufont)}
+.sinput::placeholder{color:var(--text3)}
+.sbtn{padding:12px 26px;background:var(--accent);border:none;color:#fff;cursor:pointer;font-size:14px;font-family:var(--ufont);font-weight:500;white-space:nowrap;transition:background var(--trans)}
+.sbtn:hover{background:var(--accent2)}
+.shint{color:var(--text3);font-size:12px;text-align:center;margin-top:10px}
+.rwrap{width:100%;max-width:720px;margin-top:16px}
+.rhdr{display:flex;justify-content:space-between;color:var(--text3);font-size:12px;padding:0 2px 10px}
+.rcard{display:flex;align-items:center;gap:14px;padding:13px 16px;margin-bottom:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all var(--trans)}
+.rcard:hover{border-color:var(--accent);background:var(--surface2);transform:translateX(3px)}
+.rthumb{width:44px;height:58px;border-radius:6px;flex-shrink:0;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;text-align:center;line-height:1.3;padding:4px}
+.rinfo{flex:1;min-width:0}
+.rtitle{font-size:14px;color:var(--text);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rmeta{font-size:12px;color:var(--text3)}
+.rarrow{color:var(--text3);font-size:18px;flex-shrink:0}
+.empty{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty .ei{font-size:44px;margin-bottom:12px}
+.ltxt{text-align:center;padding:40px;color:var(--text3);font-size:14px}
 
-/* ══════════════════════════════════════════════
-   HOME PAGE
-══════════════════════════════════════════════ */
-#homePage{
-  display:flex;flex-direction:column;align-items:center;
-  padding:60px 20px 40px;
-}
-.hero{text-align:center;margin-bottom:48px}
-.hero h1{
-  font-family:'ZCOOL XiaoWei',serif;font-size:clamp(32px,6vw,56px);
-  color:var(--text);line-height:1.2;margin-bottom:14px;letter-spacing:4px;
-}
-.hero h1 span{color:var(--accent)}
-.hero p{color:var(--text2);font-size:15px;letter-spacing:1px}
+/* ── READER ── */
+#readerPage{min-height:100vh;display:none;flex-direction:column}
+#readerPage.active{display:flex}
+.rtopbar{display:flex;align-items:center;gap:8px;padding:0 16px;height:48px;flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.rtopbar .logo{font-size:17px;letter-spacing:2px}
+.tbsep{color:var(--border);font-size:12px}
+.tbbook{font-size:12px;color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbch{font-size:12px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tbacts{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.tbtn{background:none;border:1px solid var(--border);color:var(--text2);cursor:pointer;padding:4px 10px;border-radius:5px;font-size:12px;font-family:var(--ufont);transition:all var(--trans);white-space:nowrap}
+.tbtn:hover{border-color:var(--accent);color:var(--accent)}
+.tbtn:disabled{opacity:.3;cursor:default;pointer-events:none}
+.rprog{height:2px;background:var(--border);flex-shrink:0}
+.rprogfill{height:100%;background:var(--accent);width:0;transition:width .1s linear}
+.rmain{display:flex;flex:1;min-height:0;overflow:hidden}
 
-.search-box{
-  width:100%;max-width:640px;position:relative;margin-bottom:16px;
-}
-.search-input{
-  width:100%;padding:16px 60px 16px 22px;
-  font-size:17px;font-family:var(--ui-font);
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:50px;color:var(--text);outline:none;
-  transition:border-color var(--trans),box-shadow var(--trans);
-}
-.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-.search-input::placeholder{color:var(--text3)}
-.search-btn{
-  position:absolute;right:6px;top:50%;transform:translateY(-50%);
-  background:var(--accent);border:none;color:#fff;
-  width:44px;height:44px;border-radius:50%;cursor:pointer;
-  font-size:18px;display:flex;align-items:center;justify-content:center;
-  transition:background var(--trans),transform .15s;
-}
-.search-btn:hover{background:var(--accent2);transform:translateY(-50%) scale(1.06)}
-.search-hint{color:var(--text3);font-size:13px;text-align:center}
+/* sidebar */
+.sidebar{width:var(--sw);flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:calc(100vh - 50px);position:sticky;top:50px;overflow:hidden;transition:width var(--trans)}
+.sidebar.hidden{width:0;min-width:0;overflow:hidden}
+.sbhead{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sbttl{font-size:13px;color:var(--text);font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbcnt{font-size:11px;color:var(--text3)}
+.sbacts{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sabtn{flex:1;padding:6px 4px;border-radius:5px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:11px;font-family:var(--ufont);transition:all var(--trans);text-align:center;white-space:nowrap}
+.sabtn:hover{border-color:var(--accent);color:var(--accent)}
+.clist{flex:1;overflow-y:auto;padding:4px 0}
+.clist::-webkit-scrollbar{width:3px}
+.clist::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.citem{padding:8px 14px;cursor:pointer;font-size:12px;color:var(--text2);border-left:2px solid transparent;transition:all .15s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.citem:hover{color:var(--text);background:var(--surface);border-left-color:var(--accent)}
+.citem.on{color:var(--accent);border-left-color:var(--accent);background:var(--glow)}
+.cmore{padding:10px;text-align:center;color:var(--accent);font-size:12px;cursor:pointer;border-top:1px solid var(--border)}
+.cmore:hover{background:var(--glow)}
+.dlsec{border-top:1px solid var(--border);padding:10px;flex-shrink:0}
+.dlmain{width:100%;padding:8px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:12px;font-family:var(--ufont);transition:all var(--trans);display:flex;align-items:center;justify-content:center;gap:5px}
+.dlmain:hover{border-color:var(--accent);color:var(--accent);background:var(--glow)}
+.dlpw{margin-top:6px;display:none}
+.dlbb{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.dlbf{height:100%;background:var(--accent);width:0;transition:width .3s}
+.dlst{font-size:11px;color:var(--text3);margin-top:4px;text-align:center}
 
-/* 搜索结果 */
-.results-area{width:100%;max-width:740px;margin-top:20px}
-.results-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 4px 12px;color:var(--text2);font-size:14px;
-}
-.result-card{
-  display:flex;align-items:center;gap:14px;
-  padding:14px 18px;margin-bottom:8px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r);cursor:pointer;
-  transition:all var(--trans);text-decoration:none;color:inherit;
-}
-.result-card:hover{border-color:var(--accent);background:var(--surface2);transform:translateX(4px)}
-.result-thumb{
-  width:46px;height:62px;border-radius:6px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--accent2),var(--accent));
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;color:#fff;font-weight:600;text-align:center;line-height:1.3;padding:4px;
-  overflow:hidden;
-}
-.result-thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px}
-.result-info{flex:1;min-width:0}
-.result-title{font-size:15px;font-weight:500;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.result-meta{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.result-arrow{color:var(--text3);font-size:16px;flex-shrink:0}
-
-/* ══════════════════════════════════════════════
-   BOOK DETAIL PAGE
-══════════════════════════════════════════════ */
-#bookPage{padding-bottom:40px}
-.book-hero{
-  display:flex;gap:20px;padding:24px 20px;
-  background:linear-gradient(var(--surface),var(--bg));
-}
-.book-cover{
-  width:100px;height:136px;border-radius:8px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--accent2),var(--accent));
-  display:flex;align-items:center;justify-content:center;
-  font-size:13px;color:#fff;font-weight:600;text-align:center;
-  overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4);
-}
-.book-cover img{width:100%;height:100%;object-fit:cover}
-.book-meta h1{font-size:20px;color:var(--text);margin-bottom:8px;font-family:'ZCOOL XiaoWei',serif;letter-spacing:1px}
-.book-meta p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:12px;max-height:72px;overflow:hidden}
-.book-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn{
-  padding:9px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;
-  font-family:var(--ui-font);font-weight:500;transition:all var(--trans);
-  display:flex;align-items:center;gap:6px;white-space:nowrap;
-}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
-.btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border)}
-.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
-.btn-sm{padding:6px 14px;font-size:13px}
-
-.section-title{
-  font-size:14px;font-weight:500;color:var(--text2);letter-spacing:1px;
-  padding:16px 20px 10px;border-bottom:1px solid var(--border);margin-bottom:0;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.chapter-list{padding:8px 12px}
-.chapter-item{
-  padding:11px 8px;border-bottom:1px solid var(--border);cursor:pointer;
-  color:var(--text2);font-size:14px;transition:color var(--trans);
-  display:flex;align-items:center;justify-content:space-between;
-  border-radius:6px;
-}
-.chapter-item:hover{color:var(--accent);background:var(--accent-glow);padding-left:14px}
-.chapter-item.read{color:var(--text3)}
-
-/* 折叠章节 */
-.chapter-more{
-  text-align:center;padding:14px;color:var(--accent);font-size:14px;
-  cursor:pointer;border-top:1px solid var(--border);
-}
-.chapter-more:hover{background:var(--accent-glow)}
-
-/* 下载面板 */
-.dl-panel{
-  margin:12px 20px;padding:16px;
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  display:none;
-}
-.dl-panel.show{display:block}
-.dl-progress{
-  margin-top:12px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;
-}
-.dl-bar{height:100%;background:var(--accent);width:0;transition:width .3s;border-radius:3px}
-.dl-status{font-size:13px;color:var(--text2);margin-top:8px}
-
-/* ══════════════════════════════════════════════
-   READER PAGE
-══════════════════════════════════════════════ */
-#readerPage{
-  --reader-max:680px;
-}
-.reader-body{
-  max-width:var(--reader-max);margin:0 auto;
-  padding:32px 24px 80px;
-}
-.reader-chapter-title{
-  font-family:'ZCOOL XiaoWei',serif;font-size:22px;color:var(--text);
-  margin-bottom:28px;letter-spacing:2px;line-height:1.5;
-  padding-bottom:16px;border-bottom:1px solid var(--border);
-}
-.reader-content{
-  font-family:var(--read-font);
-  font-size:var(--font-size);
-  line-height:var(--line-h);
-  color:var(--text);
-  letter-spacing:0.05em;
-}
-.reader-content p{
-  text-indent:2em;margin-bottom:0.5em;
-}
-.reader-nav{
-  display:flex;gap:12px;padding:20px 24px;
-  max-width:var(--reader-max);margin:0 auto;
-  border-top:1px solid var(--border);
-}
-.reader-nav .btn{flex:1;justify-content:center}
-
-/* ══════════════════════════════════════════════
-   SETTINGS DRAWER
-══════════════════════════════════════════════ */
-.drawer-mask{
-  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
-  display:none;opacity:0;transition:opacity var(--trans);
-}
-.drawer-mask.show{display:flex;align-items:flex-end;justify-content:center}
-.drawer-mask.visible{opacity:1}
-.drawer{
-  width:100%;max-width:500px;background:var(--surface);
-  border-radius:20px 20px 0 0;padding:24px 24px 32px;
-  transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
-}
-.drawer-mask.visible .drawer{transform:translateY(0)}
-.drawer-handle{
-  width:40px;height:4px;background:var(--border);
-  border-radius:2px;margin:0 auto 24px;
-}
-.drawer h3{font-size:15px;color:var(--text2);margin-bottom:18px;font-weight:400;letter-spacing:1px}
-.setting-row{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:20px;
-}
-.setting-label{font-size:14px;color:var(--text)}
-.theme-swatches{display:flex;gap:10px}
-.swatch{
-  width:28px;height:28px;border-radius:50%;cursor:pointer;
-  border:2px solid transparent;transition:border-color var(--trans),transform .15s;
-}
-.swatch:hover,.swatch.active{border-color:var(--accent);transform:scale(1.15)}
-.swatch-dark{background:#0f0e0c;box-shadow:0 0 0 1px #444}
-.swatch-warm{background:#f5f0e8;box-shadow:0 0 0 1px #c8b89a}
-.swatch-green{background:#0d1a0f;box-shadow:0 0 0 1px #4caf50}
-.swatch-gray{background:#f0f0f0;box-shadow:0 0 0 1px #999}
-.font-size-ctrl{display:flex;align-items:center;gap:12px}
-.font-size-ctrl button{
-  width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
-  background:var(--surface2);color:var(--text);cursor:pointer;font-size:18px;
-  display:flex;align-items:center;justify-content:center;transition:all var(--trans);
-}
-.font-size-ctrl button:hover{border-color:var(--accent);color:var(--accent)}
-.font-size-ctrl span{min-width:40px;text-align:center;font-size:15px;color:var(--text)}
-.line-slider{
-  -webkit-appearance:none;appearance:none;width:140px;height:4px;
-  background:var(--border);border-radius:2px;outline:none;cursor:pointer;
-}
-.line-slider::-webkit-slider-thumb{
-  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
-  background:var(--accent);cursor:pointer;
+/* mobile sidebar overlay */
+.sbmask{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none}
+.sbmask.on{display:block}
+@media(max-width:720px){
+  .sidebar{position:fixed;left:0;top:0;height:100%;z-index:201;transform:translateX(-100%);width:260px;transition:transform var(--trans)}
+  .sidebar.mob-open{transform:translateX(0)}
+  .sidebar.hidden{transform:translateX(-100%);width:260px}
+  .tbbook,.tbsep:first-of-type{display:none}
 }
 
-/* ══════════════════════════════════════════════
-   AUTH MODAL
-══════════════════════════════════════════════ */
-.modal-mask{
-  position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;
-  display:none;align-items:center;justify-content:center;padding:20px;
-}
-.modal-mask.show{display:flex}
-.modal-box{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:16px;padding:32px;width:100%;max-width:360px;
-}
-.modal-box h2{font-family:'ZCOOL XiaoWei',serif;font-size:22px;color:var(--text);margin-bottom:24px;letter-spacing:2px}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
-.field input{
-  width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);
-  border-radius:8px;color:var(--text);font-size:14px;font-family:var(--ui-font);outline:none;
-  transition:border-color var(--trans);
-}
+/* content */
+.cwrap{flex:1;overflow-y:auto;padding:36px clamp(16px,5vw,80px) 80px;min-width:0}
+.cwrap::-webkit-scrollbar{width:5px}
+.cwrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.chtitle{font-family:'ZCOOL XiaoWei',serif;font-size:clamp(17px,2.5vw,24px);color:var(--text);letter-spacing:2px;line-height:1.6;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.chbody{font-family:var(--rfont);font-size:var(--fs);line-height:var(--lh);color:var(--text);letter-spacing:.04em;max-width:700px}
+.chbody p{text-indent:2em;margin-bottom:.35em}
+.chnav{display:flex;gap:10px;margin-top:40px;padding-top:20px;border-top:1px solid var(--border);max-width:700px}
+.chnav .tbtn{flex:1;text-align:center;padding:10px}
+
+/* settings drawer */
+.dmask{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.dmask.on{display:flex}
+.drawer{width:100%;max-width:460px;background:var(--surface);border-radius:18px 18px 0 0;padding:20px 22px 30px;animation:sup .28s ease}
+@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.dhandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+.dh3{font-size:13px;color:var(--text2);margin-bottom:14px;letter-spacing:1px}
+.drow{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.dlabel{font-size:13px;color:var(--text)}
+.tdots{display:flex;gap:10px}
+.tdot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.tdot:hover,.tdot.on{border-color:var(--accent);transform:scale(1.15)}
+.tdot.dk{background:#0f0e0c;outline:1px solid #444}
+.tdot.wm{background:#f5f0e8;outline:1px solid #c8b89a}
+.tdot.gn{background:#0d1a0f;outline:1px solid #4caf50}
+.tdot.gy{background:#f2f2f2;outline:1px solid #999}
+.fsctl{display:flex;align-items:center;gap:10px}
+.fsbtn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all var(--trans)}
+.fsbtn:hover{border-color:var(--accent);color:var(--accent)}
+.fsv{min-width:34px;text-align:center;font-size:13px;color:var(--text)}
+.lhsl{-webkit-appearance:none;width:120px;height:3px;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+.lhsl::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer}
+.fbtns{display:flex;gap:8px}
+.fbtn{padding:5px 13px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:12px;font-family:var(--ufont);transition:all var(--trans)}
+.fbtn:hover,.fbtn.on{border-color:var(--accent);color:var(--accent);background:var(--glow)}
+
+/* auth modal */
+.amask{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;display:none;align-items:center;justify-content:center;padding:20px}
+.amask.on{display:flex}
+.abox{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px;width:100%;max-width:320px}
+.abox h2{font-family:'ZCOOL XiaoWei',serif;font-size:19px;color:var(--text);margin-bottom:18px;letter-spacing:2px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.field input{width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:var(--ufont);outline:none;transition:border-color var(--trans)}
 .field input:focus{border-color:var(--accent)}
-.modal-btns{display:flex;gap:10px;margin-top:20px}
-.modal-btns .btn{flex:1;justify-content:center}
-.auth-switch{text-align:center;margin-top:14px;font-size:13px;color:var(--text3)}
-.auth-switch a{color:var(--accent);cursor:pointer}
+.abtns{display:flex;gap:8px;margin-top:14px}
+.abtn{flex:1;padding:9px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-family:var(--ufont);font-weight:500;transition:all var(--trans)}
+.abtn-o{background:none;border:1px solid var(--border);color:var(--text2)}
+.abtn-o:hover{border-color:var(--accent);color:var(--accent)}
+.abtn-p{background:var(--accent);color:#fff}
+.abtn-p:hover{background:var(--accent2)}
+.atgl{text-align:center;margin-top:10px;font-size:12px;color:var(--text3)}
+.atgl a{color:var(--accent);cursor:pointer}
 
-/* ══════════════════════════════════════════════
-   ACCOUNT PAGE
-══════════════════════════════════════════════ */
-#accountPage{padding:24px 20px}
-.account-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r);padding:24px;margin-bottom:16px;
-}
-.account-card h3{font-size:15px;color:var(--text);margin-bottom:16px;font-weight:500}
-.history-item{
-  padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;
-  transition:color var(--trans);
-}
-.history-item:last-child{border-bottom:none}
-.history-item:hover{color:var(--accent)}
-.history-title{font-size:14px;color:var(--text)}
-.history-meta{font-size:12px;color:var(--text3);margin-top:3px}
-
-/* ══════════════════════════════════════════════
-   UTIL
-══════════════════════════════════════════════ */
-.empty{text-align:center;padding:60px 20px;color:var(--text3)}
-.empty .icon{font-size:48px;margin-bottom:16px}
-.loading{text-align:center;padding:40px;color:var(--text3)}
-.loading::after{content:'';animation:dots 1.5s infinite}
-@keyframes dots{0%{content:''}33%{content:'.'}66%{content:'..'}100%{content:'...'}}
-.toast{
-  position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:var(--surface2);border:1px solid var(--border);
-  color:var(--text);padding:10px 22px;border-radius:50px;
-  font-size:14px;z-index:500;opacity:0;pointer-events:none;
-  transition:all .3s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.3);
-}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* toast */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(14px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 20px;border-radius:50px;font-size:13px;z-index:999;opacity:0;pointer-events:none;transition:all .22s;white-space:nowrap;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<!-- ══ HOME PAGE ══ -->
+<!-- HOME PAGE -->
 <div id="homePage" class="page active">
-  <nav class="nav">
-    <a class="nav-logo" onclick="goHome()">墨卷</a>
-    <div class="nav-actions">
-      <button class="icon-btn" onclick="showSettings()" title="阅读设置">⚙️</button>
-      <button class="icon-btn" id="accountBtn" onclick="goAccount()" title="账号">👤</button>
-    </div>
+  <nav class="hnav">
+    <span class="logo">墨卷</span>
+    <div class="sp"></div>
+    <button class="ibtn" onclick="openSettings()">⚙</button>
+    <button class="ibtn" id="authBtn" onclick="openAuth()">👤</button>
   </nav>
-  <div style="padding:0 20px">
-    <div class="hero" style="padding-top:50px">
-      <h1>万卷藏书，<span>一键畅读</span></h1>
-      <p>搜索全网小说 · 免费阅读 · 记录书架</p>
+  <div class="hbody">
+    <div class="hero">
+      <h1>万卷藏书，<em>一键畅读</em></h1>
+      <p>搜索全网免费小说 · 在线阅读 · 本地下载</p>
     </div>
-    <div style="display:flex;justify-content:center">
-      <div class="search-box">
-        <input class="search-input" id="searchInput" placeholder="输入书名或作者...">
-        <button class="search-btn" onclick="doSearch()">🔍</button>
-      </div>
+    <div class="srow">
+      <input class="sinput" id="sinput" placeholder="输入书名或作者名…">
+      <button class="sbtn" id="sbtn" onclick="doSearch()">搜 索</button>
     </div>
-    <p class="search-hint">内容来源于互联网，仅供个人学习使用</p>
-    <div class="results-area" id="resultsArea" style="margin:20px auto 0">
-      <div id="homeArea" style="text-align:center;padding:40px 0">
-        <div style="font-size:48px;margin-bottom:16px">📚</div>
-        <p style="color:var(--text3);font-size:14px">搜索你喜欢的小说</p>
-      </div>
-      <div id="resultsList" style="display:none">
-        <div class="results-header">
-          <span id="resCount"></span>
-          <span style="color:var(--text3);font-size:12px">搜索结果来自互联网</span>
-        </div>
-        <div id="resItems"></div>
-      </div>
+    <p class="shint">内容来源于互联网，仅供个人学习使用</p>
+    <div class="rwrap" id="rwrap" style="display:none">
+      <div class="rhdr"><span id="rcount"></span><span>来自互联网搜索</span></div>
+      <div id="rlist"></div>
     </div>
   </div>
 </div>
 
-<!-- ══ BOOK PAGE ══ -->
-<div id="bookPage" class="page">
-  <nav class="nav">
-    <button class="nav-back" onclick="goHome()">←</button>
-    <span class="nav-title" id="bookNavTitle">书籍详情</span>
-    <div class="nav-actions">
-      <button class="icon-btn" id="shelfBtn" onclick="toggleShelf()" title="书架">🔖</button>
-    </div>
-  </nav>
-  <div class="book-hero">
-    <div class="book-cover" id="bookCover">封面</div>
-    <div class="book-meta">
-      <h1 id="bookTitle">—</h1>
-      <p id="bookIntro"></p>
-      <div class="book-actions">
-        <button class="btn btn-primary" onclick="startRead()">▶ 开始阅读</button>
-        <button class="btn btn-outline btn-sm" onclick="toggleDl()">⬇ 下载</button>
-      </div>
-    </div>
-  </div>
-  <div class="dl-panel" id="dlPanel">
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:14px;color:var(--text)">下载全本为 TXT</span>
-      <button class="btn btn-primary btn-sm" id="dlBtn" onclick="downloadBook()">开始下载</button>
-    </div>
-    <div class="dl-progress"><div class="dl-bar" id="dlBar"></div></div>
-    <div class="dl-status" id="dlStatus"></div>
-  </div>
-  <div class="section-title">
-    <span>目录</span>
-    <span id="chapCount" style="font-size:12px;color:var(--text3)"></span>
-  </div>
-  <div class="chapter-list" id="chapterList"><div class="loading">加载中</div></div>
-  <div class="chapter-more" id="chapterMore" style="display:none" onclick="showAllChapters()">展开全部章节 ▼</div>
-</div>
-
-<!-- ══ READER PAGE ══ -->
+<!-- READER PAGE -->
 <div id="readerPage" class="page">
-  <nav class="nav">
-    <button class="nav-back" onclick="goBack()">←</button>
-    <span class="nav-title" id="readerNavTitle"></span>
-    <div class="nav-actions">
-      <button class="icon-btn" onclick="showSettings()">⚙️</button>
+  <div class="rtopbar">
+    <span class="logo" onclick="goHome()">墨卷</span>
+    <span class="tbsep">›</span>
+    <span class="tbbook" id="tbbook"></span>
+    <span class="tbsep">›</span>
+    <span class="tbch" id="tbch"></span>
+    <div class="tbacts">
+      <button class="tbtn" onclick="toggleSidebar()">☰ 目录</button>
+      <button class="tbtn" id="bp1" onclick="loadPrev()" disabled>← 上章</button>
+      <button class="tbtn" id="bn1" onclick="loadNext()" disabled>下章 →</button>
+      <button class="tbtn" onclick="openSettings()">⚙</button>
     </div>
-  </nav>
-  <div class="read-progress"><div class="read-progress-bar" id="progressBar"></div></div>
-  <div class="reader-body">
-    <h2 class="reader-chapter-title" id="readerTitle"></h2>
-    <div class="reader-content" id="readerContent"><div class="loading">加载中</div></div>
   </div>
-  <div class="reader-nav">
-    <button class="btn btn-outline" id="prevBtn" onclick="loadPrev()">← 上一章</button>
-    <button class="btn btn-outline" id="nextBtn" onclick="loadNext()">下一章 →</button>
+  <div class="rprog"><div class="rprogfill" id="rpf"></div></div>
+  <div class="rmain">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sbhead">
+        <div class="sbttl" id="sbttl">加载中…</div>
+        <div class="sbcnt" id="sbcnt"></div>
+      </div>
+      <div class="sbacts">
+        <button class="sabtn" onclick="goHome()">← 返回搜索</button>
+        <button class="sabtn" onclick="closeSidebar()">✕ 收起</button>
+      </div>
+      <div class="clist" id="clist">
+        <div style="padding:18px;color:var(--text3);font-size:12px;text-align:center">目录加载中…</div>
+      </div>
+      <div class="dlsec">
+        <button class="dlmain" onclick="startDownload()">⬇ 下载全本 TXT</button>
+        <div class="dlpw" id="dlpw">
+          <div class="dlbb"><div class="dlbf" id="dlbf"></div></div>
+          <div class="dlst" id="dlst"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sbmask" id="sbmask" onclick="closeSidebar()"></div>
+    <!-- Content -->
+    <div class="cwrap" id="cwrap">
+      <h2 class="chtitle" id="chtitle">加载中…</h2>
+      <div class="chbody" id="chbody"><p style="color:var(--text3)">正在解析目录，请稍候…</p></div>
+      <div class="chnav">
+        <button class="tbtn" id="bp2" onclick="loadPrev()" disabled>← 上一章</button>
+        <button class="tbtn" id="bn2" onclick="loadNext()" disabled>下一章 →</button>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ══ ACCOUNT PAGE ══ -->
-<div id="accountPage" class="page">
-  <nav class="nav">
-    <button class="nav-back" onclick="goHome()">←</button>
-    <span class="nav-title">我的账号</span>
-  </nav>
-  <div id="accountContent"></div>
-</div>
-
-<!-- ══ SETTINGS DRAWER ══ -->
-<div class="drawer-mask" id="drawerMask" onclick="if(event.target===this)hideSettings()">
+<!-- SETTINGS DRAWER -->
+<div class="dmask" id="dmask" onclick="if(event.target===this)closeSettings()">
   <div class="drawer">
-    <div class="drawer-handle"></div>
-    <h3>阅读设置</h3>
-    <div class="setting-row">
-      <span class="setting-label">主题</span>
-      <div class="theme-swatches">
-        <div class="swatch swatch-dark" onclick="setTheme('')" title="夜间"></div>
-        <div class="swatch swatch-warm" onclick="setTheme('warm')" title="暖纸"></div>
-        <div class="swatch swatch-green" onclick="setTheme('green')" title="护眼"></div>
-        <div class="swatch swatch-gray" onclick="setTheme('gray')" title="浅色"></div>
+    <div class="dhandle"></div>
+    <p class="dh3">阅读设置</p>
+    <div class="drow">
+      <span class="dlabel">主题</span>
+      <div class="tdots">
+        <div class="tdot dk" onclick="setTheme('')"></div>
+        <div class="tdot wm" onclick="setTheme('warm')"></div>
+        <div class="tdot gn" onclick="setTheme('green')"></div>
+        <div class="tdot gy" onclick="setTheme('gray')"></div>
       </div>
     </div>
-    <div class="setting-row">
-      <span class="setting-label">字号</span>
-      <div class="font-size-ctrl">
-        <button onclick="changeFontSize(-1)">−</button>
-        <span id="fontSizeLabel">18</span>
-        <button onclick="changeFontSize(1)">+</button>
+    <div class="drow">
+      <span class="dlabel">字号</span>
+      <div class="fsctl">
+        <button class="fsbtn" onclick="setFS(-1)">−</button>
+        <span class="fsv" id="fsv">18</span>px
+        <button class="fsbtn" onclick="setFS(1)">+</button>
       </div>
     </div>
-    <div class="setting-row">
-      <span class="setting-label">行距</span>
-      <input class="line-slider" type="range" min="1.4" max="3.2" step="0.2" id="lineSlider" oninput="changeLineH(this.value)">
+    <div class="drow">
+      <span class="dlabel">行距</span>
+      <input class="lhsl" type="range" min="1.6" max="3.2" step="0.2" id="lhsl" oninput="setLH(this.value)">
     </div>
-    <div class="setting-row">
-      <span class="setting-label">字体</span>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-outline btn-sm" onclick="setFont('serif')">宋体</button>
-        <button class="btn btn-outline btn-sm" onclick="setFont('sans')">黑体</button>
+    <div class="drow">
+      <span class="dlabel">字体</span>
+      <div class="fbtns">
+        <button class="fbtn" onclick="setFont('serif')">宋体</button>
+        <button class="fbtn" onclick="setFont('sans')">黑体</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ══ AUTH MODAL ══ -->
-<div class="modal-mask" id="authModal">
-  <div class="modal-box">
-    <h2 id="authTitle">登录账号</h2>
-    <div class="field"><label>邮箱</label><input type="email" id="authEmail" placeholder="your@email.com"></div>
-    <div class="field"><label>密码</label><input type="password" id="authPwd" placeholder="6位以上密码"></div>
-    <div class="modal-btns">
-      <button class="btn btn-outline" onclick="closeAuth()">取消</button>
-      <button class="btn btn-primary" id="authSubmit" onclick="submitAuth()">登录</button>
+<!-- AUTH MODAL -->
+<div class="amask" id="amask">
+  <div class="abox">
+    <h2 id="atitle">登录账号</h2>
+    <div class="field"><label>邮箱</label><input type="email" id="aemail" placeholder="your@email.com"></div>
+    <div class="field"><label>密码</label><input type="password" id="apwd" placeholder="至少6位"></div>
+    <div class="abtns">
+      <button class="abtn abtn-o" onclick="closeAuth()">取消</button>
+      <button class="abtn abtn-p" id="asubmit" onclick="submitAuth()">登录</button>
     </div>
-    <div class="auth-switch">还没有账号？<a onclick="toggleAuthMode()">注册</a></div>
+    <div class="atgl">还没账号？<a onclick="toggleAM()">注册</a></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- ══════════════════════════════════════════════
-   JAVASCRIPT
-══════════════════════════════════════════════ -->
 <script>
-/* ══ CONFIG - 部署前必须修改这两项 ══ */
-const CFG = {
-  worker: 'https://novel-read.sir-way105.workers.dev',
-  sbUrl:  'https://kuztkvkhubvstbcdoerh.supabase.co',
-  sbKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1enRrdmtodWJ2c3RiY2RvZXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNzg3MzAsImV4cCI6MjA5Mzc1NDczMH0.-JhbCP0SOm-FzP4YeI9Df-ubTTELBfIsviFWlmNt6f4',
+/* CONFIG */
+const CFG={
+  worker:'https://novel-read.sir-way105.workers.dev',
+  sbUrl:'https://kuztkvkhubvstbcdoerh.supabase.co',
+  sbKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1enRrdmtodWJ2c3RiY2RvZXJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNzg3MzAsImV4cCI6MjA5Mzc1NDczMH0.-JhbCP0SOm-FzP4YeI9Df-ubTTELBfIsviFWlmNt6f4',
 }
 
-/* ══ SETTINGS ══ */
-const DEF = { theme:'', fontSize:18, lineH:2.0, font:'serif' }
-let S = { ...DEF, ...JSON.parse(localStorage.getItem('mj_cfg')||'{}') }
+/* SETTINGS */
+let S={theme:'',fs:18,lh:2.0,font:'serif',...JSON.parse(localStorage.getItem('mj_s')||'{}')}
+function applyS(){
+  document.documentElement.setAttribute('data-theme',S.theme)
+  document.documentElement.style.setProperty('--fs',S.fs+'px')
+  document.documentElement.style.setProperty('--lh',S.lh)
+  document.documentElement.style.setProperty('--rfont',S.font==='sans'?"'Noto Sans SC',sans-serif":"'Noto Serif SC',serif")
+  const fv=document.getElementById('fsv');if(fv)fv.textContent=S.fs
+  const ls=document.getElementById('lhsl');if(ls)ls.value=S.lh
+}
+function saveS(){localStorage.setItem('mj_s',JSON.stringify(S));applyS()}
+function setTheme(t){S.theme=t;saveS()}
+function setFS(d){S.fs=Math.max(14,Math.min(28,S.fs+d));saveS()}
+function setLH(v){S.lh=parseFloat(v);saveS()}
+function setFont(f){S.font=f;saveS()}
+function openSettings(){document.getElementById('dmask').classList.add('on')}
+function closeSettings(){document.getElementById('dmask').classList.remove('on')}
 
-function applySettings() {
-  document.documentElement.setAttribute('data-theme', S.theme)
-  document.documentElement.style.setProperty('--font-size', S.fontSize+'px')
-  document.documentElement.style.setProperty('--line-h', S.lineH)
-  document.documentElement.style.setProperty('--read-font',
-    S.font==='sans' ? "'Noto Sans SC',sans-serif" : "'Noto Serif SC',serif")
-  document.getElementById('fontSizeLabel').textContent = S.fontSize
-  document.getElementById('lineSlider').value = S.lineH
-}
-function saveSettings() {
-  localStorage.setItem('mj_cfg', JSON.stringify(S))
-  applySettings()
-}
-function setTheme(t){ S.theme=t; saveSettings(); document.querySelectorAll('.swatch').forEach(s=>s.classList.remove('active')); }
-function changeFontSize(d){ S.fontSize=Math.max(14,Math.min(28,S.fontSize+d)); saveSettings() }
-function changeLineH(v){ S.lineH=parseFloat(v); saveSettings() }
-function setFont(f){ S.font=f; saveSettings() }
-function showSettings(){
-  const m=document.getElementById('drawerMask')
-  m.classList.add('show')
-  requestAnimationFrame(()=>m.classList.add('visible'))
-}
-function hideSettings(){
-  const m=document.getElementById('drawerMask')
-  m.classList.remove('visible')
-  setTimeout(()=>m.classList.remove('show'),350)
-}
+/* SUPABASE */
+let _sb=null,_user=null
+try{
+  _sb=supabase.createClient(CFG.sbUrl,CFG.sbKey)
+  _sb.auth.getSession().then(({data:{session}})=>{
+    _user=session?.user||null
+    if(_user)document.getElementById('authBtn').textContent='🟢'
+  })
+}catch(e){}
 
-/* ══ SUPABASE ══ */
-let _sb = null, _user = null
-try {
-  _sb = supabase.createClient(CFG.sbUrl, CFG.sbKey)
-  _sb.auth.onAuthStateChange((e,s)=>{ _user=s?.user||null; updateAccountBtn() })
-  _sb.auth.getSession().then(({data:{session}})=>{ _user=session?.user||null; updateAccountBtn() })
-} catch(e){}
-
-function updateAccountBtn(){
-  const b=document.getElementById('accountBtn')
-  if(b) b.textContent=_user?'🟢':'👤'
-}
-
-/* ══ AUTH ══ */
-let _authMode='login'
-function goAccount(){
-  if(_user) showPage('accountPage', renderAccount)
-  else openAuth()
-}
-function openAuth(){ document.getElementById('authModal').classList.add('show') }
-function closeAuth(){ document.getElementById('authModal').classList.remove('show') }
-function toggleAuthMode(){
-  _authMode=_authMode==='login'?'register':'login'
-  document.getElementById('authTitle').textContent=_authMode==='login'?'登录账号':'注册账号'
-  document.getElementById('authSubmit').textContent=_authMode==='login'?'登录':'注册'
-  document.querySelector('.auth-switch').innerHTML=
-    _authMode==='login'?'还没有账号？<a onclick="toggleAuthMode()">注册</a>':'已有账号？<a onclick="toggleAuthMode()">登录</a>'
+/* AUTH */
+let _am='login'
+function openAuth(){document.getElementById('amask').classList.add('on')}
+function closeAuth(){document.getElementById('amask').classList.remove('on')}
+function toggleAM(){
+  _am=_am==='login'?'register':'login'
+  document.getElementById('atitle').textContent=_am==='login'?'登录账号':'注册账号'
+  document.getElementById('asubmit').textContent=_am==='login'?'登录':'注册'
+  document.querySelector('.atgl').innerHTML=_am==='login'?'还没账号？<a onclick="toggleAM()">注册</a>':'已有账号？<a onclick="toggleAM()">登录</a>'
 }
 async function submitAuth(){
-  if(!_sb){toast('请先配置 Supabase');return}
-  const email=document.getElementById('authEmail').value
-  const pwd=document.getElementById('authPwd').value
-  if(!email||!pwd){toast('请填写邮箱和密码');return}
+  if(!_sb){toast('请先配置Supabase');return}
+  const em=document.getElementById('aemail').value,pw=document.getElementById('apwd').value
+  if(!em||!pw){toast('请填写邮箱和密码');return}
   try{
-    let err
-    if(_authMode==='login'){
-      ({error:err}=await _sb.auth.signInWithPassword({email,password:pwd}))
-    }else{
-      ({error:err}=await _sb.auth.signUp({email,password:pwd}))
-    }
-    if(err)throw err
-    closeAuth()
-    toast(_authMode==='login'?'登录成功':'注册成功，请查收验证邮件')
-    if(_authMode==='login') setTimeout(()=>goAccount(),500)
+    const{error}=await(_am==='login'?_sb.auth.signInWithPassword({email:em,password:pw}):_sb.auth.signUp({email:em,password:pw}))
+    if(error)throw error
+    closeAuth();toast(_am==='login'?'登录成功':'注册成功，请查收验证邮件')
+    _user=(await _sb.auth.getUser()).data.user
+    if(_user)document.getElementById('authBtn').textContent='🟢'
   }catch(e){toast(e.message||'操作失败')}
 }
 
-function renderAccount(){
-  const el=document.getElementById('accountContent')
-  if(!_user){el.innerHTML='<div class="empty"><div class="icon">👤</div><p>请先登录</p></div>';return}
-  const hist=getHistory()
-  el.innerHTML=`
-    <div style="padding:20px">
-      <div class="account-card">
-        <h3>账号信息</h3>
-        <p style="font-size:14px;color:var(--text2)">📧 ${_user.email}</p>
-        <button class="btn btn-outline btn-sm" style="margin-top:14px" onclick="signOut()">退出登录</button>
-      </div>
-      <div class="account-card">
-        <h3>阅读历史</h3>
-        ${hist.length?hist.map(h=>`
-          <div class="history-item" onclick="openBook('${h.url}','${encodeURIComponent(h.title)}')">
-            <div class="history-title">${h.title}</div>
-            <div class="history-meta">${h.chapter||''}  ${h.time||''}</div>
-          </div>`).join(''):'<p style="color:var(--text3);font-size:14px">暂无记录</p>'}
-      </div>
-    </div>`
-}
-async function signOut(){
-  if(_sb)await _sb.auth.signOut()
-  toast('已退出登录')
-  goHome()
+/* API */
+async function api(a,p){
+  const u=new URL(CFG.worker);u.searchParams.set('a',a);u.searchParams.set('p',p)
+  const r=await fetch(u.toString())
+  if(!r.ok)throw new Error('HTTP '+r.status)
+  const d=await r.json()
+  if(d.error)throw new Error(d.error)
+  return d
 }
 
-/* ══ LOCAL STORAGE ══ */
-function getHistory(){ return JSON.parse(localStorage.getItem('mj_hist')||'[]') }
-function addHistory(url,title,chapter=''){
-  let h=getHistory().filter(x=>x.url!==url)
-  h.unshift({url,title,chapter,time:new Date().toLocaleDateString()})
-  if(h.length>50)h=h.slice(0,50)
-  localStorage.setItem('mj_hist',JSON.stringify(h))
-}
-function getShelf(){ return JSON.parse(localStorage.getItem('mj_shelf')||'[]') }
-function onShelf(url){ return getShelf().some(x=>x.url===url) }
-function toggleShelfItem(url,title){
-  let s=getShelf()
-  if(onShelf(url)){ s=s.filter(x=>x.url!==url); toast('已移出书架') }
-  else { s.unshift({url,title}); toast('已加入书架') }
-  localStorage.setItem('mj_shelf',JSON.stringify(s))
-  updateShelfBtn()
-}
-
-/* ══ PAGES ══ */
-let _prevPage='homePage'
-function showPage(id, cb){
-  const pages=document.querySelectorAll('.page')
-  pages.forEach(p=>{ if(p.id!==id) _prevPage=p.classList.contains('active')?p.id:_prevPage; p.classList.remove('active') })
+/* PAGE NAV */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   document.getElementById(id).classList.add('active')
   window.scrollTo(0,0)
-  if(cb)cb()
 }
-function goHome(){
-  document.getElementById('homeArea').style.display='block'
-  document.getElementById('resultsList').style.display='none'
-  showPage('homePage')
-}
-function goBack(){
-  showPage(_prevPage==='readerPage'?'bookPage':_prevPage,
-    _prevPage==='bookPage'?null:null)
-}
-function goAccount(){ showPage('accountPage',renderAccount) }
+function goHome(){showPage('homePage')}
 
-/* ══ API ══ */
-async function api(action, param){
-  const url=new URL(CFG.worker)
-  url.searchParams.set('a',action)
-  url.searchParams.set('p',param)
-  const res=await fetch(url.toString())
-  if(!res.ok)throw new Error('HTTP '+res.status)
-  const data=await res.json()
-  if(data.error)throw new Error(data.error)
-  return data
-}
-
-/* ══ SEARCH ══ */
-let _searching=false
+/* SEARCH */
+let _busy=false
 async function doSearch(){
-  if(_searching){toast('搜索中，请稍候…');return}
-  const q=document.getElementById('searchInput').value.trim()
-  if(!q){toast('请输入搜索内容');return}
-  _searching=true
-  document.getElementById('homeArea').style.display='none'
-  document.getElementById('resultsList').style.display='block'
-  document.getElementById('resItems').innerHTML='<div class="loading">搜索中</div>'
-  document.getElementById('resCount').textContent=''
+  if(_busy){toast('搜索中…');return}
+  const q=document.getElementById('sinput').value.trim()
+  if(!q){toast('请输入书名');return}
+  _busy=true
+  const btn=document.getElementById('sbtn');btn.textContent='搜索中…';btn.disabled=true
+  document.getElementById('rwrap').style.display='block'
+  document.getElementById('rlist').innerHTML='<div class="ltxt">搜索中，请稍候…</div>'
+  document.getElementById('rcount').textContent=''
   try{
     const data=await api('search',q)
     const items=data.results||[]
-    document.getElementById('resCount').textContent=`共 ${items.length} 条`
-    if(!items.length){
-      document.getElementById('resItems').innerHTML='<div class="empty"><div class="icon">🔍</div><p>未找到结果，换个关键词试试</p></div>'
-      return
-    }
-    document.getElementById('resItems').innerHTML=items.map((r,i)=>{
-      const initials=r.title.slice(0,3)
-      return `<div class="result-card" onclick="openBook('${encodeURIComponent(r.url)}','${encodeURIComponent(r.title)}')">
-        <div class="result-thumb">${initials}</div>
-        <div class="result-info">
-          <div class="result-title">${r.title}</div>
-          <div class="result-meta">🔗 ${new URL(r.url).hostname}</div>
-        </div>
-        <span class="result-arrow">›</span>
-      </div>`
+    document.getElementById('rcount').textContent='共'+items.length+'条'
+    if(!items.length){document.getElementById('rlist').innerHTML='<div class="empty"><div class="ei">🔍</div><p>未找到结果</p></div>';return}
+    document.getElementById('rlist').innerHTML=items.map(r=>{
+      const su=encodeURIComponent(r.url),st=encodeURIComponent(r.title)
+      const host=new URL(r.url).hostname
+      const ini=r.title.replace(/[《》\s]/g,'').slice(0,3)
+      return`<div class="rcard" onclick="enterReader('${su}','${st}')">
+        <div class="rthumb">${ini}</div>
+        <div class="rinfo"><div class="rtitle">${esc(r.title)}</div><div class="rmeta">🔗 ${host}</div></div>
+        <span class="rarrow">›</span></div>`
     }).join('')
   }catch(e){
-    document.getElementById('resItems').innerHTML=`<div class="empty"><div class="icon">⚠️</div><p>搜索失败：${e.message}</p></div>`
-  } finally {
-    _searching=false
-  }
+    document.getElementById('rlist').innerHTML=`<div class="empty"><div class="ei">⚠️</div><p>搜索失败：${esc(e.message)}</p></div>`
+  }finally{_busy=false;btn.textContent='搜 索';btn.disabled=false}
 }
 
-/* ══ BOOK ══ */
-let _bookUrl='', _bookTitle='', _chapters=[], _showAll=false
+/* READER STATE */
+let _burl='',_btitle='',_chs=[],_idx=0,_loaded=false,_pu=null,_nu=null
 
-function openBook(encUrl, encTitle){
-  _bookUrl=decodeURIComponent(encUrl)
-  _bookTitle=decodeURIComponent(encTitle)
-  _chapters=[]
-  _showAll=false
-  document.getElementById('bookNavTitle').textContent=_bookTitle
-  document.getElementById('bookTitle').textContent=_bookTitle
-  document.getElementById('bookIntro').textContent='加载中...'
-  document.getElementById('bookCover').innerHTML=_bookTitle.slice(0,4)
-  document.getElementById('chapterList').innerHTML='<div class="loading">加载目录</div>'
-  document.getElementById('chapterMore').style.display='none'
-  document.getElementById('dlPanel').classList.remove('show')
-  updateShelfBtn()
-  showPage('bookPage')
-  loadBook()
-}
-
-async function loadBook(){
-  try{
-    const data=await api('book',_bookUrl)
-    if(data.cover){
-      document.getElementById('bookCover').innerHTML=`<img src="${data.cover}" onerror="this.parentNode.textContent='${_bookTitle.slice(0,4)}'}">`
-    }
-    document.getElementById('bookTitle').textContent=data.title||_bookTitle
-    _bookTitle=data.title||_bookTitle
-    document.getElementById('bookIntro').textContent=data.intro||'暂无简介'
-    _chapters=data.chapters||[]
-    document.getElementById('chapCount').textContent=_chapters.length+'章'
-    if(_chapters.length===0){
-      document.getElementById('chapterList').innerHTML=`
-        <div class="empty">
-          <div class="icon">🔒</div>
-          <p style="margin-bottom:8px">该网站暂不支持自动解析</p>
-          <p style="font-size:12px;color:var(--text3);margin-bottom:16px">可能是付费平台或有反爬保护</p>
-          <a href="${_bookUrl}" target="_blank" class="btn btn-outline" style="display:inline-flex">在原网站阅读 ↗</a>
-        </div>`
-    } else {
-      renderChapters()
-    }
-  }catch(e){
-    document.getElementById('bookIntro').textContent='目录加载失败'
-    document.getElementById('chapterList').innerHTML=`
-      <div class="empty">
-        <div class="icon">⚠️</div>
-        <p style="margin-bottom:16px">无法自动解析该网站</p>
-        <a href="${_bookUrl}" target="_blank" class="btn btn-outline" style="display:inline-flex">在原网站打开 ↗</a>
-      </div>`
-  }
-}
-
-function renderChapters(){
-  const limit=_showAll?_chapters.length:80
-  const show=_chapters.slice(0,limit)
-  document.getElementById('chapterList').innerHTML=show.map((c,i)=>`
-    <div class="chapter-item" onclick="openChapter(${i})">
-      <span>${c.title}</span>
-      <span style="color:var(--text3);font-size:12px">›</span>
-    </div>`).join('')
-  if(!_showAll && _chapters.length>80){
-    document.getElementById('chapterMore').style.display='block'
-    document.getElementById('chapterMore').textContent=`展开全部 ${_chapters.length} 章 ▼`
-  }else{
-    document.getElementById('chapterMore').style.display='none'
-  }
-}
-
-function showAllChapters(){ _showAll=true; renderChapters() }
-
-function updateShelfBtn(){
-  const b=document.getElementById('shelfBtn')
-  if(b) b.textContent=onShelf(_bookUrl)?'⭐':'🔖'
-}
-function toggleShelf(){ toggleShelfItem(_bookUrl,_bookTitle); }
-
-function startRead(){
-  if(!_chapters.length){
-    // 尝试直接跳到第一章
-    toast('目录未加载，请稍候')
-    return
-  }
-  // 找上次进度
-  const hist=getHistory().find(h=>h.url===_bookUrl)
-  const idx=hist?(_chapters.findIndex(c=>c.url===hist.chapterUrl)||0):0
-  openChapter(idx>=0?idx:0)
-}
-
-/* ══ READER ══ */
-let _curChIdx=0, _curChUrl='', _prevUrl=null, _nextUrl=null
-
-function openChapter(idx){
-  _curChIdx=idx
-  const ch=_chapters[idx]
-  if(!ch){toast('章节不存在');return}
-  _curChUrl=ch.url
-  loadChapter(ch.url, ch.title)
+/* ENTER READER - 直接进阅读页 */
+async function enterReader(su,st){
+  _burl=decodeURIComponent(su);_btitle=decodeURIComponent(st)
+  _chs=[];_idx=0;_loaded=false;_pu=null;_nu=null
   showPage('readerPage')
+  document.getElementById('tbbook').textContent=_btitle
+  document.getElementById('tbch').textContent='目录加载中…'
+  document.getElementById('sbttl').textContent=_btitle
+  document.getElementById('sbcnt').textContent=''
+  document.getElementById('chtitle').textContent='加载中…'
+  document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">正在解析书籍目录…</p>'
+  document.getElementById('clist').innerHTML='<div style="padding:18px;color:var(--text3);font-size:12px;text-align:center">目录加载中…</div>'
+  setNav(false,false)
+  addHist(_burl,_btitle,0)
+  // 并行加载目录
+  fetchBook()
 }
 
-async function loadChapter(url, hint){
-  document.getElementById('readerTitle').textContent=hint||'加载中...'
-  document.getElementById('readerContent').innerHTML='<div class="loading">加载正文</div>'
-  document.getElementById('readerNavTitle').textContent=hint||''
-  document.getElementById('progressBar').style.width='0'
-  _prevUrl=null; _nextUrl=null
-  updateNavBtns()
-  window.scrollTo(0,0)
-
+async function fetchBook(){
   try{
-    const data=await api('chapter',url)
-    document.getElementById('readerTitle').textContent=data.title||hint||'未知章节'
-    document.getElementById('readerNavTitle').textContent=data.title||hint||''
-    // 渲染正文
-    const paras=data.content.split('\n').filter(p=>p.trim())
-    document.getElementById('readerContent').innerHTML=paras.map(p=>`<p>${escHtml(p.trim())}</p>`).join('')
-    _prevUrl=data.prevUrl; _nextUrl=data.nextUrl
-    // 如果 API 没返回 prev/next，用本地章节列表推算
-    if(!_prevUrl && _curChIdx>0) _prevUrl='__local__'
-    if(!_nextUrl && _curChIdx<_chapters.length-1) _nextUrl='__local__'
-    updateNavBtns()
-    // 记录进度
-    addHistory(_bookUrl, _bookTitle, data.title)
-    // 滚动进度条
-    setupScrollProgress()
+    const d=await api('book',_burl)
+    _btitle=d.title||_btitle
+    _chs=d.chapters||[]
+    _loaded=true
+    document.getElementById('sbttl').textContent=_btitle
+    document.getElementById('tbbook').textContent=_btitle
+    document.getElementById('sbcnt').textContent=_chs.length+'章'
+    renderClist()
+    if(_chs.length>0){
+      const h=getHist().find(x=>x.url===_burl)
+      fetchChapter(_chs[h?.idx||0]?.url||_chs[0].url, _chs[h?.idx||0]?.title||_chs[0].title, h?.idx||0)
+    }else{
+      document.getElementById('chtitle').textContent=_btitle
+      document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:14px">暂无法解析该网站目录。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
+      document.getElementById('clist').innerHTML=`<div style="padding:18px;text-align:center"><p style="color:var(--text3);font-size:12px;margin-bottom:10px">目录解析失败</p><a href="${_burl}" target="_blank" style="color:var(--accent);font-size:12px">原网站 ↗</a></div>`
+    }
   }catch(e){
-    document.getElementById('readerContent').innerHTML=`
-      <div class="empty">
-        <div class="icon">⚠️</div>
-        <p style="margin-bottom:16px">章节加载失败：${e.message}</p>
-        <a href="${url}" target="_blank" class="btn btn-outline" style="display:inline-flex">在原网站阅读 ↗</a>
-      </div>`
+    document.getElementById('chtitle').textContent='加载失败'
+    document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:14px">目录解析失败。</p><a href="${_burl}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
+    document.getElementById('clist').innerHTML=`<div style="padding:18px;text-align:center"><a href="${_burl}" target="_blank" style="color:var(--accent);font-size:12px">原网站阅读 ↗</a></div>`
   }
 }
 
-function updateNavBtns(){
-  document.getElementById('prevBtn').disabled=!_prevUrl&&_curChIdx<=0
-  document.getElementById('nextBtn').disabled=!_nextUrl&&_curChIdx>=_chapters.length-1
+/* CHAPTER LIST */
+let _slim=100
+function renderClist(){
+  const show=_chs.slice(0,_slim)
+  const html=show.map((c,i)=>`<div class="citem${i===_idx?' on':''}" id="ci${i}" onclick="fetchChapter('${encodeURIComponent(c.url)}','${esc(c.title)}',${i})">${esc(c.title)}</div>`).join('')
+  const more=_chs.length>_slim?`<div class="cmore" onclick="loadMore()">显示更多（${_chs.length-_slim}章）</div>`:''
+  document.getElementById('clist').innerHTML=html+more
+}
+function loadMore(){_slim+=200;renderClist()}
+
+/* FETCH CHAPTER */
+async function fetchChapter(su,htitle,idx){
+  const url=typeof su==='string'&&su.startsWith('http')?su:decodeURIComponent(su)
+  if(idx!==undefined)_idx=idx
+  document.getElementById('chtitle').textContent=htitle||'加载中…'
+  document.getElementById('tbch').textContent=htitle||'加载中…'
+  document.getElementById('chbody').innerHTML='<p style="color:var(--text3)">加载正文中…</p>'
+  document.getElementById('rpf').style.width='0'
+  _pu=null;_nu=null;setNav(false,false)
+  document.getElementById('cwrap').scrollTop=0
+  if(idx!==undefined)hlCh(idx)
+  try{
+    const d=await api('chapter',url)
+    const title=d.title||htitle||'未知章节'
+    document.getElementById('chtitle').textContent=title
+    document.getElementById('tbch').textContent=title
+    const ps=(d.content||'').split('\n').filter(p=>p.trim())
+    document.getElementById('chbody').innerHTML=ps.length
+      ?ps.map(p=>`<p>${esc(p.trim())}</p>`).join('')
+      :`<p style="color:var(--text3)">内容为空。</p><p><a href="${url}" target="_blank" style="color:var(--accent)">原网站阅读 ↗</a></p>`
+    _pu=d.prevUrl;_nu=d.nextUrl
+    const hp=_pu||(idx!==undefined&&idx>0)
+    const hn=_nu||(idx!==undefined&&idx<_chs.length-1)
+    setNav(hp,hn)
+    addHist(_burl,_btitle,idx||0)
+    setupProg()
+  }catch(e){
+    document.getElementById('chtitle').textContent=htitle||'加载失败'
+    document.getElementById('chbody').innerHTML=`<p style="color:var(--text3);margin-bottom:12px">章节加载失败：${esc(e.message)}</p><a href="${url}" target="_blank" style="color:var(--accent)">在原网站阅读 ↗</a>`
+  }
+}
+
+function hlCh(idx){
+  document.querySelectorAll('.citem').forEach(e=>e.classList.remove('on'))
+  const el=document.getElementById('ci'+idx)
+  if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'})}
+}
+function setNav(p,n){
+  ['bp1','bp2'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=!p})
+  ['bn1','bn2'].forEach(id=>{const e=document.getElementById(id);if(e)e.disabled=!n})
 }
 function loadPrev(){
-  if(_prevUrl==='__local__'){ openChapter(_curChIdx-1); return }
-  if(_prevUrl){ _curChIdx=Math.max(0,_curChIdx-1); loadChapter(_prevUrl,'上一章') }
-  else if(_curChIdx>0) openChapter(_curChIdx-1)
+  if(_idx>0){const c=_chs[_idx-1];fetchChapter(c.url,c.title,_idx-1);return}
+  if(_pu)fetchChapter(_pu,'上一章')
 }
 function loadNext(){
-  if(_nextUrl==='__local__'){ openChapter(_curChIdx+1); return }
-  if(_nextUrl){ _curChIdx=Math.min(_chapters.length-1,_curChIdx+1); loadChapter(_nextUrl,'下一章') }
-  else if(_curChIdx<_chapters.length-1) openChapter(_curChIdx+1)
+  if(_idx<_chs.length-1){const c=_chs[_idx+1];fetchChapter(c.url,c.title,_idx+1);return}
+  if(_nu)fetchChapter(_nu,'下一章')
 }
 
-// 键盘快捷键
+/* KEYBOARD */
 document.addEventListener('keydown',e=>{
-  if(document.getElementById('readerPage').classList.contains('active')){
-    if(e.key==='ArrowLeft')loadPrev()
-    if(e.key==='ArrowRight')loadNext()
-  }
+  if(!document.getElementById('readerPage').classList.contains('active'))return
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return
+  if(e.key==='ArrowLeft')loadPrev()
+  if(e.key==='ArrowRight')loadNext()
 })
 
-function setupScrollProgress(){
-  const bar=document.getElementById('progressBar')
-  const handler=()=>{
-    const total=document.body.scrollHeight-window.innerHeight
-    const pct=total>0?Math.round(window.scrollY/total*100):0
-    bar.style.width=pct+'%'
+/* SCROLL PROGRESS */
+function setupProg(){
+  const fill=document.getElementById('rpf'),wrap=document.getElementById('cwrap')
+  wrap.removeEventListener('scroll',wrap._ph)
+  wrap._ph=()=>{
+    const t=wrap.scrollHeight-wrap.clientHeight
+    fill.style.width=(t>0?Math.round(wrap.scrollTop/t*100):0)+'%'
   }
-  window.removeEventListener('scroll',window._scrollProg)
-  window._scrollProg=handler
-  window.addEventListener('scroll',handler,{passive:true})
+  wrap.addEventListener('scroll',wrap._ph,{passive:true})
 }
 
-/* ══ DOWNLOAD ══ */
-function toggleDl(){
-  const p=document.getElementById('dlPanel')
-  p.classList.toggle('show')
+/* SIDEBAR */
+let _sbOpen=true
+function toggleSidebar(){
+  if(window.innerWidth<=720){
+    document.getElementById('sidebar').classList.toggle('mob-open')
+    document.getElementById('sbmask').classList.toggle('on')
+  }else{
+    _sbOpen=!_sbOpen
+    document.getElementById('sidebar').classList.toggle('hidden',!_sbOpen)
+  }
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('mob-open')
+  document.getElementById('sbmask').classList.remove('on')
 }
 
-async function downloadBook(){
-  if(!_chapters.length){toast('请先加载目录');return}
-  const btn=document.getElementById('dlBtn')
-  const bar=document.getElementById('dlBar')
-  const status=document.getElementById('dlStatus')
-  btn.disabled=true; btn.textContent='下载中...'
-  bar.style.width='0'
-
-  let txt=`《${_bookTitle}》\n${'='.repeat(40)}\n\n`
-  const total=_chapters.length
-  let failed=0
-
-  for(let i=0;i<total;i++){
-    const ch=_chapters[i]
-    status.textContent=`正在下载 ${i+1}/${total}：${ch.title}`
-    bar.style.width=(i/total*100)+'%'
+/* DOWNLOAD */
+let _dl=false
+async function startDownload(){
+  if(!_loaded||!_chs.length){toast('目录尚未加载，请稍候');return}
+  if(_dl){toast('下载中，请稍候');return}
+  _dl=true
+  const pw=document.getElementById('dlpw'),bf=document.getElementById('dlbf'),st=document.getElementById('dlst')
+  pw.style.display='block';bf.style.width='0'
+  let txt=`《${_btitle}》\n${'═'.repeat(40)}\n\n`
+  let fail=0
+  for(let i=0;i<_chs.length;i++){
+    st.textContent=`${i+1}/${_chs.length} ${_chs[i].title}`
+    bf.style.width=(i/_chs.length*100)+'%'
     try{
-      const data=await api('chapter',ch.url)
-      txt+=`\n\n${data.title||ch.title}\n${'─'.repeat(30)}\n\n${data.content}\n`
-    }catch(e){
-      txt+=`\n\n${ch.title}\n${'─'.repeat(30)}\n\n（章节加载失败）\n`
-      failed++
-    }
-    // 限速防封
-    await new Promise(r=>setTimeout(r,600))
+      const d=await api('chapter',_chs[i].url)
+      txt+=`\n\n${d.title||_chs[i].title}\n${'─'.repeat(30)}\n\n${d.content}\n`
+    }catch(e){txt+=`\n\n${_chs[i].title}\n${'─'.repeat(30)}\n\n（加载失败）\n`;fail++}
+    await new Promise(r=>setTimeout(r,700))
   }
-
-  bar.style.width='100%'
-  status.textContent=`下载完成！共 ${total} 章${failed?`（${failed} 章失败）`:''}`
-  btn.disabled=false; btn.textContent='重新下载'
-
-  // 触发下载
+  bf.style.width='100%';st.textContent=`完成！${_chs.length}章${fail?` (${fail}失败)`:''}`
+  _dl=false
   const blob=new Blob([txt],{type:'text/plain;charset=utf-8'})
-  const a=document.createElement('a')
-  a.href=URL.createObjectURL(blob)
-  a.download=`${_bookTitle}.txt`
-  a.click()
-  URL.revokeObjectURL(a.href)
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${_btitle}.txt`;a.click();URL.revokeObjectURL(a.href)
 }
 
-/* ══ UTILS ══ */
-function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
-
-let _toastT
-function toast(msg,ms=2400){
-  const el=document.getElementById('toast')
-  el.textContent=msg; el.classList.add('show')
-  clearTimeout(_toastT)
-  _toastT=setTimeout(()=>el.classList.remove('show'),ms)
+/* HISTORY */
+function getHist(){return JSON.parse(localStorage.getItem('mj_h')||'[]')}
+function addHist(url,title,idx){
+  let h=getHist().filter(x=>x.url!==url)
+  h.unshift({url,title,idx:idx||0,time:new Date().toLocaleDateString()})
+  if(h.length>50)h=h.slice(0,50)
+  localStorage.setItem('mj_h',JSON.stringify(h))
 }
 
-/* ══ INIT ══ */
-applySettings()
-document.getElementById('searchInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doSearch() } })
+/* UTILS */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+let _tt;function toast(m,ms=2200){const e=document.getElementById('toast');e.textContent=m;e.classList.add('on');clearTimeout(_tt);_tt=setTimeout(()=>e.classList.remove('on'),ms)}
+
+/* INIT */
+applyS()
+document.getElementById('sinput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch()}})
 </script>
 </body>
 </html>
